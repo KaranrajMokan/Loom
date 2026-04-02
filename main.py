@@ -87,7 +87,7 @@ class LoomTrackerApp:
             row.pack(fill="x", padx=12, pady=2)
             indicator = tk.Frame(row, bg=SIDEBAR_BG, width=3)
             indicator.pack(side="left", fill="y", padx=(0, 0))
-            btn = tk.Label(row, text=label, font=(FONT, 11),
+            btn = tk.Label(row, text=label, font=(FONT, 13),
                            bg=SIDEBAR_BG, fg=SIDEBAR_FG, anchor="w",
                            padx=16, pady=10, cursor="hand2")
             btn.pack(fill="x", expand=True)
@@ -125,11 +125,11 @@ class LoomTrackerApp:
         # Treeview
         style.configure("Treeview",
                          background=CARD_BG, foreground=TEXT_DARK, rowheight=32,
-                         fieldbackground=CARD_BG, font=(FONT, 10),
+                         fieldbackground=CARD_BG, font=(FONT, 12),
                          borderwidth=0, relief="flat")
         style.configure("Treeview.Heading",
                          background="#f1f5f9", foreground=TEXT_DARK,
-                         font=(FONT, 10, "bold"), relief="flat", borderwidth=0)
+                         font=(FONT, 12, "bold"), relief="flat", borderwidth=0)
         style.map("Treeview.Heading", background=[("active", "#e2e8f0")])
         style.map("Treeview", background=[("selected", "#dbeafe")],
                    foreground=[("selected", TEXT_DARK)])
@@ -149,7 +149,7 @@ class LoomTrackerApp:
 
         # Radiobutton
         style.configure("TRadiobutton", background=CARD_BG, foreground=TEXT_DARK,
-                         font=(FONT, 11), focuscolor="")
+                         font=(FONT, 13), focuscolor="")
 
     # ── Helpers ──
     def _clear_content(self):
@@ -176,7 +176,7 @@ class LoomTrackerApp:
         date_frame = tk.Frame(hdr, bg="#e2e8f0", padx=12, pady=5)
         date_frame.pack(side="right")
         tk.Label(date_frame, text=f"📅  {date.today().strftime('%A, %d %B %Y')}",
-                 font=(FONT, 10), bg="#e2e8f0", fg=TEXT_LIGHT).pack()
+                 font=(FONT, 12), bg="#e2e8f0", fg=TEXT_LIGHT).pack()
         return hdr
 
     def _make_card(self, parent, **pack_kw):
@@ -189,20 +189,20 @@ class LoomTrackerApp:
 
     def _make_button(self, parent, text, command, color=PRIMARY, width=14):
         if IS_MAC:
-            btn = tk.Button(parent, text=text, font=(FONT, 10, "bold"),
+            btn = tk.Button(parent, text=text, font=(FONT, 12, "bold"),
                             highlightbackground=color, fg=TEXT_DARK,
                             padx=16, pady=8, cursor="hand2",
                             command=command, width=width)
         else:
-            btn = tk.Button(parent, text=text, font=(FONT, 10, "bold"), bg=color,
+            btn = tk.Button(parent, text=text, font=(FONT, 12, "bold"), bg=color,
                             fg="#ffffff", bd=0, padx=16, pady=8, cursor="hand2",
                             activebackground=color, command=command, width=width)
         return btn
 
     def _make_label_entry(self, parent, label_text, row, default="", width=30, numeric_only=False):
-        tk.Label(parent, text=label_text, font=(FONT, 10, "bold"), bg=CARD_BG,
+        tk.Label(parent, text=label_text, font=(FONT, 12, "bold"), bg=CARD_BG,
                  fg=TEXT_LIGHT).grid(row=row, column=0, sticky="w", padx=12, pady=7)
-        entry = tk.Entry(parent, font=(FONT, 10), width=width, bd=0, relief="flat",
+        entry = tk.Entry(parent, font=(FONT, 12), width=width, bd=0, relief="flat",
                          bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                          highlightthickness=1, highlightcolor=ENTRY_FOCUS,
                          highlightbackground=ENTRY_BORDER)
@@ -229,10 +229,10 @@ class LoomTrackerApp:
             return False
 
     def _make_combo(self, parent, label_text, row, values, width=27):
-        tk.Label(parent, text=label_text, font=(FONT, 10), bg=CARD_BG,
+        tk.Label(parent, text=label_text, font=(FONT, 12), bg=CARD_BG,
                  fg=TEXT_DARK).grid(row=row, column=0, sticky="w", padx=10, pady=6)
         combo = ttk.Combobox(parent, values=values, width=width, state="readonly",
-                             font=(FONT, 10))
+                             font=(FONT, 12))
         combo.grid(row=row, column=1, sticky="w", padx=10, pady=6)
         return combo
 
@@ -249,13 +249,13 @@ class LoomTrackerApp:
         m_var = tk.StringVar(value=f"{initial_date.month:02d}")
         d_var = tk.StringVar(value=f"{initial_date.day:02d}")
 
-        y_cb = ttk.Combobox(frame, textvariable=y_var, values=years, width=5, state="readonly", font=(FONT, 10))
+        y_cb = ttk.Combobox(frame, textvariable=y_var, values=years, width=5, state="readonly", font=(FONT, 12))
         y_cb.pack(side="left", padx=1)
-        tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 10)).pack(side="left")
-        m_cb = ttk.Combobox(frame, textvariable=m_var, values=months, width=3, state="readonly", font=(FONT, 10))
+        tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 12)).pack(side="left")
+        m_cb = ttk.Combobox(frame, textvariable=m_var, values=months, width=3, state="readonly", font=(FONT, 12))
         m_cb.pack(side="left", padx=1)
-        tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 10)).pack(side="left")
-        d_cb = ttk.Combobox(frame, textvariable=d_var, values=[], width=3, state="readonly", font=(FONT, 10))
+        tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 12)).pack(side="left")
+        d_cb = ttk.Combobox(frame, textvariable=d_var, values=[], width=3, state="readonly", font=(FONT, 12))
         d_cb.pack(side="left", padx=1)
 
         def _update_days(*_):
@@ -347,12 +347,12 @@ class LoomTrackerApp:
             warn_hdr.pack(fill="x")
             tk.Frame(warn_hdr, bg=DANGER, width=4).pack(side="left", fill="y")
             tk.Label(warn_hdr, text="⚠️  Looms Over 80m — Action Required",
-                     font=(FONT, 13, "bold"), bg="#fef2f2", fg=DANGER).pack(anchor="w", padx=15, pady=12)
+                     font=(FONT, 15, "bold"), bg="#fef2f2", fg=DANGER).pack(anchor="w", padx=15, pady=12)
             for loom in warnings:
                 row_f = tk.Frame(warn_card, bg="#fff7ed")
                 row_f.pack(fill="x", padx=15, pady=3)
                 tk.Label(row_f, text=f"  🏭 Loom {loom['loom_number']}  —  {loom['current_length']:.1f}m in machine",
-                         font=(FONT, 11), bg="#fff7ed", fg=DANGER).pack(side="left", padx=5, pady=8)
+                         font=(FONT, 13), bg="#fff7ed", fg=DANGER).pack(side="left", padx=5, pady=8)
                 self._make_button(row_f, "✂ Cut at 80m", lambda l=loom: self._cut_at_80(l),
                                   color=SUCCESS, width=12).pack(side="right", padx=5, pady=4)
                 self._make_button(row_f, "✂ Custom Cut", lambda l=loom: self._custom_cut(l),
@@ -369,7 +369,7 @@ class LoomTrackerApp:
 
         # ── Today's entries ──
         entry_card = self._make_card(self.content)
-        tk.Label(entry_card, text="📝  Today's Entries", font=(FONT, 13, "bold"),
+        tk.Label(entry_card, text="📝  Today's Entries", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(14, 5))
         tk.Frame(entry_card, bg=DIVIDER, height=1).pack(fill="x", padx=15)
         if today_entries:
@@ -388,22 +388,22 @@ class LoomTrackerApp:
             tree.pack(fill="x", padx=15, pady=(8, 14))
         else:
             tk.Label(entry_card, text="No entries yet today. Go to Daily Entry to start.",
-                     font=(FONT, 10), bg=CARD_BG, fg=TEXT_LIGHT).pack(padx=15, pady=18)
+                     font=(FONT, 12), bg=CARD_BG, fg=TEXT_LIGHT).pack(padx=15, pady=18)
 
     def _build_cut_section(self, parent, title, bg_color, items):
         """Build a styled info section with title and key-value rows."""
         section = tk.Frame(parent, bg=bg_color, highlightthickness=1, highlightbackground=DIVIDER)
         section.pack(fill="x", padx=24, pady=(0, 8))
-        tk.Label(section, text=title, font=(FONT, 10, "bold"), bg=bg_color,
+        tk.Label(section, text=title, font=(FONT, 12, "bold"), bg=bg_color,
                  fg=TEXT_LIGHT).pack(anchor="w", padx=14, pady=(10, 4))
         tk.Frame(section, bg=DIVIDER, height=1).pack(fill="x", padx=14)
         grid = tk.Frame(section, bg=bg_color)
         grid.pack(fill="x", padx=14, pady=(6, 10))
         grid.columnconfigure(1, weight=1)
         for i, (label, val, color) in enumerate(items):
-            tk.Label(grid, text=label, font=(FONT, 10), bg=bg_color,
+            tk.Label(grid, text=label, font=(FONT, 12), bg=bg_color,
                      fg=TEXT_DARK, anchor="w").grid(row=i, column=0, padx=(0, 10), pady=3, sticky="w")
-            tk.Label(grid, text=val, font=(FONT, 11, "bold"), bg=bg_color,
+            tk.Label(grid, text=val, font=(FONT, 13, "bold"), bg=bg_color,
                      fg=color, anchor="e").grid(row=i, column=1, padx=(10, 0), pady=3, sticky="e")
         return section
 
@@ -445,7 +445,7 @@ class LoomTrackerApp:
         header.pack(fill="x")
         header.pack_propagate(False)
         tk.Label(header, text=f"✂  Cut at 80m — Loom {loom['loom_number']}",
-                 font=(FONT, 14, "bold"), bg=PRIMARY, fg="#ffffff").pack(side="left", padx=20, pady=12)
+                 font=(FONT, 16, "bold"), bg=PRIMARY, fg="#ffffff").pack(side="left", padx=20, pady=12)
 
         body = tk.Frame(win, bg=BG)
         body.pack(fill="both", expand=True)
@@ -474,9 +474,9 @@ class LoomTrackerApp:
         # Comment field
         comment_card = tk.Frame(body, bg=CARD_BG, highlightthickness=1, highlightbackground=DIVIDER)
         comment_card.pack(fill="x", padx=24, pady=(0, 8))
-        tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 10, "bold"),
+        tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 12, "bold"),
                  bg=CARD_BG, fg=TEXT_LIGHT).pack(anchor="w", padx=14, pady=(10, 4))
-        comment_entry = tk.Entry(comment_card, font=(FONT, 10), width=40, bd=0, relief="flat",
+        comment_entry = tk.Entry(comment_card, font=(FONT, 12), width=40, bd=0, relief="flat",
                                  bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                                  highlightthickness=1, highlightcolor=ENTRY_FOCUS,
                                  highlightbackground=ENTRY_BORDER)
@@ -511,7 +511,7 @@ class LoomTrackerApp:
         header.pack(fill="x")
         header.pack_propagate(False)
         tk.Label(header, text=f"✂  Custom Cut — Loom {loom['loom_number']}",
-                 font=(FONT, 14, "bold"), bg="#7c3aed", fg="#ffffff").pack(side="left", padx=20, pady=12)
+                 font=(FONT, 16, "bold"), bg="#7c3aed", fg="#ffffff").pack(side="left", padx=20, pady=12)
 
         body = tk.Frame(win, bg=BG)
         body.pack(fill="both", expand=True)
@@ -521,18 +521,18 @@ class LoomTrackerApp:
         total_frame.pack(fill="x", padx=24, pady=(16, 8))
         tf_inner = tk.Frame(total_frame, bg=CARD_BG)
         tf_inner.pack(fill="x", padx=14, pady=10)
-        tk.Label(tf_inner, text="📏 Total length in machine:", font=(FONT, 11),
+        tk.Label(tf_inner, text="📏 Total length in machine:", font=(FONT, 13),
                  bg=CARD_BG, fg=TEXT_DARK).pack(side="left")
-        tk.Label(tf_inner, text=f"{total:.1f}m", font=(FONT, 14, "bold"),
+        tk.Label(tf_inner, text=f"{total:.1f}m", font=(FONT, 16, "bold"),
                  bg=CARD_BG, fg=DANGER).pack(side="right")
 
         # Input section
         input_card = tk.Frame(body, bg=CARD_BG, highlightthickness=1, highlightbackground=ENTRY_FOCUS)
         input_card.pack(fill="x", padx=24, pady=(0, 8))
         tk.Label(input_card, text="🧵 Enter remaining length in loom after cut (m):",
-                 font=(FONT, 11, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=14, pady=(12, 4))
+                 font=(FONT, 13, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=14, pady=(12, 4))
         vcmd = (win.register(self._validate_numeric), "%P")
-        remaining_entry = tk.Entry(input_card, font=(FONT, 14), width=12, bd=0, relief="flat",
+        remaining_entry = tk.Entry(input_card, font=(FONT, 16), width=12, bd=0, relief="flat",
                                    bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                                    validate="key", validatecommand=vcmd,
                                    highlightthickness=1, highlightcolor=ENTRY_FOCUS,
@@ -546,16 +546,16 @@ class LoomTrackerApp:
         # Comment field
         comment_card = tk.Frame(body, bg=CARD_BG, highlightthickness=1, highlightbackground=DIVIDER)
         comment_card.pack(fill="x", padx=24, pady=(0, 8))
-        tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 10, "bold"),
+        tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 12, "bold"),
                  bg=CARD_BG, fg=TEXT_LIGHT).pack(anchor="w", padx=14, pady=(10, 4))
-        custom_comment_entry = tk.Entry(comment_card, font=(FONT, 10), width=40, bd=0, relief="flat",
+        custom_comment_entry = tk.Entry(comment_card, font=(FONT, 12), width=40, bd=0, relief="flat",
                                         bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                                         highlightthickness=1, highlightcolor=ENTRY_FOCUS,
                                         highlightbackground=ENTRY_BORDER)
         custom_comment_entry.pack(anchor="w", padx=14, pady=(0, 10))
 
         # Validation + button area
-        validation_label = tk.Label(body, text="", font=(FONT, 10, "bold"), bg=BG, fg=DANGER)
+        validation_label = tk.Label(body, text="", font=(FONT, 12, "bold"), bg=BG, fg=DANGER)
         validation_label.pack(padx=24, anchor="w", pady=(4, 0))
 
         btn_frame = tk.Frame(body, bg=BG)
@@ -649,12 +649,12 @@ class LoomTrackerApp:
         win.configure(bg=CARD_BG)
         win.grab_set()
         tk.Label(win, text=f"Skip reset for Loom {loom['loom_number']}?",
-                 font=(FONT, 13, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(pady=(20, 5))
+                 font=(FONT, 15, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(pady=(20, 5))
         tk.Label(win, text=f"Current length: {loom['current_length']:.1f}m",
-                 font=(FONT, 11), bg=CARD_BG, fg=DANGER).pack()
-        tk.Label(win, text="Comment (optional):", font=(FONT, 10),
+                 font=(FONT, 13), bg=CARD_BG, fg=DANGER).pack()
+        tk.Label(win, text="Comment (optional):", font=(FONT, 12),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=20, pady=(10, 2))
-        comment_entry = tk.Entry(win, font=(FONT, 10), width=40, bd=0, relief="flat",
+        comment_entry = tk.Entry(win, font=(FONT, 12), width=40, bd=0, relief="flat",
                                  bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                                  highlightthickness=1, highlightcolor=ENTRY_FOCUS,
                                  highlightbackground=ENTRY_BORDER)
@@ -713,15 +713,15 @@ class LoomTrackerApp:
         styles = db.get_active_styles()
 
         if not looms:
-            tk.Label(scroll_frame, text="⚠️ No looms found. Add looms first.", font=(FONT, 13),
+            tk.Label(scroll_frame, text="⚠️ No looms found. Add looms first.", font=(FONT, 15),
                      bg=BG, fg=DANGER).pack(pady=30)
             return
         if not operators:
-            tk.Label(scroll_frame, text="⚠️ No operators found. Add operators first.", font=(FONT, 13),
+            tk.Label(scroll_frame, text="⚠️ No operators found. Add operators first.", font=(FONT, 15),
                      bg=BG, fg=DANGER).pack(pady=30)
             return
         if not styles:
-            tk.Label(scroll_frame, text="⚠️ No styles found. Add dhothi styles first.", font=(FONT, 13),
+            tk.Label(scroll_frame, text="⚠️ No styles found. Add dhothi styles first.", font=(FONT, 15),
                      bg=BG, fg=DANGER).pack(pady=30)
             return
 
@@ -733,16 +733,16 @@ class LoomTrackerApp:
         tk.Frame(shift_card, bg=PRIMARY, height=3).pack(fill="x")
         shift_inner = tk.Frame(shift_card, bg=CARD_BG)
         shift_inner.pack(fill="x", padx=5)
-        tk.Label(shift_inner, text="☀️  Shift:", font=(FONT, 11, "bold"),
+        tk.Label(shift_inner, text="☀️  Shift:", font=(FONT, 13, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, padx=15, pady=14, sticky="w")
         shift_var = tk.StringVar(value="Day")
         for i, s in enumerate(["Day", "Night"]):
             tk.Radiobutton(shift_inner, text=s, variable=shift_var, value=s,
-                           font=(FONT, 11), bg=CARD_BG, fg=TEXT_DARK,
+                           font=(FONT, 13), bg=CARD_BG, fg=TEXT_DARK,
                            activebackground=CARD_BG, activeforeground=TEXT_DARK,
                            selectcolor=CARD_BG).grid(row=0, column=i+1, padx=10, pady=14)
 
-        tk.Label(shift_inner, text="📅 Date:", font=(FONT, 11, "bold"),
+        tk.Label(shift_inner, text="📅 Date:", font=(FONT, 13, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=3, padx=(20, 5), pady=14)
         op_names = [o["name"] for o in operators]
         style_codes = [f"{s['style_code']} - {s['style_name']}" for s in styles]
@@ -787,38 +787,38 @@ class LoomTrackerApp:
                              font=(FONT, 9), bg=hdr_bg, fg=WARNING_CLR).pack(side="left", padx=5, pady=10)
                 length_color = DANGER if is_over else SUCCESS
                 tk.Label(hdr, text=f"📏 In Machine: {loom['current_length']:.1f}m",
-                         font=(FONT, 11, "bold"), bg=hdr_bg, fg=length_color).pack(side="right", padx=15, pady=10)
+                         font=(FONT, 13, "bold"), bg=hdr_bg, fg=length_color).pack(side="right", padx=15, pady=10)
                 if is_over:
-                    tk.Label(hdr, text="⚠️ OVER 80m", font=(FONT, 10, "bold"),
+                    tk.Label(hdr, text="⚠️ OVER 80m", font=(FONT, 12, "bold"),
                              bg=hdr_bg, fg=DANGER).pack(side="right", padx=5)
 
                 # Entry fields with clear labels
                 fields = tk.Frame(card, bg=CARD_BG)
                 fields.pack(fill="x", padx=15, pady=10)
 
-                tk.Label(fields, text="👷 Operator:", font=(FONT, 10, "bold"),
+                tk.Label(fields, text="👷 Operator:", font=(FONT, 12, "bold"),
                          bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, padx=(0, 5), pady=6, sticky="w")
-                op_combo = ttk.Combobox(fields, values=op_names, width=18, state="readonly", font=(FONT, 10))
+                op_combo = ttk.Combobox(fields, values=op_names, width=18, state="readonly", font=(FONT, 12))
                 op_combo.grid(row=0, column=1, padx=5, pady=6)
 
-                tk.Label(fields, text="🎨 Dhothi Style:", font=(FONT, 10, "bold"),
+                tk.Label(fields, text="🎨 Dhothi Style:", font=(FONT, 12, "bold"),
                          bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=2, padx=(15, 5), pady=6, sticky="w")
-                st_combo = ttk.Combobox(fields, values=style_codes, width=22, state="readonly", font=(FONT, 10))
+                st_combo = ttk.Combobox(fields, values=style_codes, width=22, state="readonly", font=(FONT, 12))
                 st_combo.grid(row=0, column=3, padx=5, pady=6)
 
-                tk.Label(fields, text="📏 Length Produced (m):", font=(FONT, 10, "bold"),
+                tk.Label(fields, text="📏 Length Produced (m):", font=(FONT, 12, "bold"),
                          bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(0, 5), pady=6, sticky="w")
                 vcmd = (fields.register(self._validate_numeric), "%P")
-                len_entry = tk.Entry(fields, font=(FONT, 10), width=10, bd=0, relief="flat",
+                len_entry = tk.Entry(fields, font=(FONT, 12), width=10, bd=0, relief="flat",
                                      bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                                      validate="key", validatecommand=vcmd,
                                      highlightthickness=1, highlightcolor=ENTRY_FOCUS,
                                      highlightbackground=ENTRY_BORDER)
                 len_entry.grid(row=1, column=1, padx=5, pady=6, sticky="w")
 
-                tk.Label(fields, text="💬 Comment (optional):", font=(FONT, 10),
+                tk.Label(fields, text="💬 Comment (optional):", font=(FONT, 12),
                          bg=CARD_BG, fg=TEXT_LIGHT).grid(row=1, column=2, padx=(15, 5), pady=6, sticky="w")
-                comment_entry = tk.Entry(fields, font=(FONT, 10), width=22, bd=0, relief="flat",
+                comment_entry = tk.Entry(fields, font=(FONT, 12), width=22, bd=0, relief="flat",
                                          bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
                                          highlightthickness=1, highlightcolor=ENTRY_FOCUS,
                                          highlightbackground=ENTRY_BORDER)
@@ -964,17 +964,17 @@ class LoomTrackerApp:
 
         # Add / Edit loom form
         card = self._make_card(self.content)
-        form_title = tk.Label(card, text="➕ Add New Loom", font=(FONT, 13, "bold"),
+        form_title = tk.Label(card, text="➕ Add New Loom", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK)
         form_title.grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
         e_num = self._make_label_entry(card, "Loom Number *", 1)
         e_loc = self._make_label_entry(card, "Location", 2)
         e_notes = self._make_label_entry(card, "Notes", 3)
 
-        tk.Label(card, text="Status", font=(FONT, 10), bg=CARD_BG,
+        tk.Label(card, text="Status", font=(FONT, 12), bg=CARD_BG,
                  fg=TEXT_DARK).grid(row=4, column=0, sticky="w", padx=10, pady=6)
         status_combo = ttk.Combobox(card, values=["Active", "Inactive"], width=27,
-                                     state="readonly", font=(FONT, 10))
+                                     state="readonly", font=(FONT, 12))
         status_combo.grid(row=4, column=1, sticky="w", padx=10, pady=6)
         status_combo.set("Active")
 
@@ -1010,7 +1010,7 @@ class LoomTrackerApp:
 
         # Looms list
         list_card = self._make_card(self.content)
-        tk.Label(list_card, text="All Looms  (click a row to edit)", font=(FONT, 13, "bold"),
+        tk.Label(list_card, text="All Looms  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
         cols = ("ID", "Loom #", "Location", "Status", "Current Length (m)", "Notes")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
@@ -1055,7 +1055,7 @@ class LoomTrackerApp:
         self._make_header("Manage Operators")
 
         card = self._make_card(self.content)
-        form_title = tk.Label(card, text="➕ Add New Operator", font=(FONT, 13, "bold"),
+        form_title = tk.Label(card, text="➕ Add New Operator", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK)
         form_title.grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
         e_name = self._make_label_entry(card, "Name *", 1)
@@ -1064,10 +1064,10 @@ class LoomTrackerApp:
         e_addr = self._make_label_entry(card, "Address", 4)
         e_joined = self._make_label_entry(card, "Date Joined", 5, default=date.today().isoformat())
 
-        tk.Label(card, text="Status", font=(FONT, 10), bg=CARD_BG,
+        tk.Label(card, text="Status", font=(FONT, 12), bg=CARD_BG,
                  fg=TEXT_DARK).grid(row=6, column=0, sticky="w", padx=10, pady=6)
         active_combo = ttk.Combobox(card, values=["Active", "Inactive"], width=27,
-                                     state="readonly", font=(FONT, 10))
+                                     state="readonly", font=(FONT, 12))
         active_combo.grid(row=6, column=1, sticky="w", padx=10, pady=6)
         active_combo.set("Active")
 
@@ -1107,7 +1107,7 @@ class LoomTrackerApp:
         self._make_button(btn_frame, "🗑 Clear", clear_form, color=WARNING_CLR, width=8).pack(side="left")
 
         list_card = self._make_card(self.content)
-        tk.Label(list_card, text="All Operators  (click a row to edit)", font=(FONT, 13, "bold"),
+        tk.Label(list_card, text="All Operators  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
         cols = ("ID", "Name", "Spouse", "Phone", "Address", "Joined", "Status")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
@@ -1151,17 +1151,17 @@ class LoomTrackerApp:
         self._make_header("Manage Dhothi Styles")
 
         card = self._make_card(self.content)
-        form_title = tk.Label(card, text="➕ Add New Style", font=(FONT, 13, "bold"),
+        form_title = tk.Label(card, text="➕ Add New Style", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK)
         form_title.grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
         e_code = self._make_label_entry(card, "Style Code *", 1)
         e_sname = self._make_label_entry(card, "Style Name *", 2)
         e_price = self._make_label_entry(card, "Price (₹/m)", 3, default="0", numeric_only=True)
 
-        tk.Label(card, text="Status", font=(FONT, 10), bg=CARD_BG,
+        tk.Label(card, text="Status", font=(FONT, 12), bg=CARD_BG,
                  fg=TEXT_DARK).grid(row=4, column=0, sticky="w", padx=10, pady=6)
         active_combo = ttk.Combobox(card, values=["Active", "Inactive"], width=27,
-                                     state="readonly", font=(FONT, 10))
+                                     state="readonly", font=(FONT, 12))
         active_combo.grid(row=4, column=1, sticky="w", padx=10, pady=6)
         active_combo.set("Active")
 
@@ -1201,7 +1201,7 @@ class LoomTrackerApp:
         self._make_button(btn_frame, "🗑 Clear", clear_form, color=WARNING_CLR, width=8).pack(side="left")
 
         list_card = self._make_card(self.content)
-        tk.Label(list_card, text="All Dhothi Styles  (click a row to edit)", font=(FONT, 13, "bold"),
+        tk.Label(list_card, text="All Dhothi Styles  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
         cols = ("ID", "Code", "Name", "Price (₹/m)", "Status")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
@@ -1280,7 +1280,7 @@ class LoomTrackerApp:
         for label, key in tabs:
             frame = tk.Frame(tab_bar, bg=TAB_INACTIVE_BG, cursor="hand2")
             frame.pack(side="left", padx=(0, 1))
-            lbl = tk.Label(frame, text=label, font=(FONT, 11, "bold"),
+            lbl = tk.Label(frame, text=label, font=(FONT, 13, "bold"),
                            bg=TAB_INACTIVE_BG, fg=TAB_INACTIVE_FG,
                            padx=20, pady=10, cursor="hand2")
             lbl.pack()
@@ -1300,35 +1300,35 @@ class LoomTrackerApp:
 
         # Filters card
         card = self._make_card(scroll_frame)
-        tk.Label(card, text="🔎  Filter Production", font=(FONT, 13, "bold"),
+        tk.Label(card, text="🔎  Filter Production", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=6, padx=15, pady=(12, 5), sticky="w")
 
-        tk.Label(card, text="📅 From:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         e_from = self._make_date_selector(card)
         e_from.grid(row=1, column=1, padx=5, pady=8)
-        tk.Label(card, text="📅 To:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         e_to = self._make_date_selector(card)
         e_to.grid(row=1, column=3, padx=5, pady=8)
-        tk.Label(card, text="Shift:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
-        shift_combo = ttk.Combobox(card, values=["All", "Day", "Night"], width=8, state="readonly", font=(FONT, 10))
+        tk.Label(card, text="Shift:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
+        shift_combo = ttk.Combobox(card, values=["All", "Day", "Night"], width=8, state="readonly", font=(FONT, 12))
         shift_combo.grid(row=1, column=5, padx=5, pady=8)
         shift_combo.set("All")
 
         loom_opts = ["All"] + [l["loom_number"] for l in looms]
-        tk.Label(card, text="🏭 Loom:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
-        loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 10))
+        tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
+        loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
         loom_combo.grid(row=2, column=1, padx=5, pady=8)
         loom_combo.set("All")
 
         op_opts = ["All"] + [o["name"] for o in operators]
-        tk.Label(card, text="👷 Operator:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
-        op_combo = ttk.Combobox(card, values=op_opts, width=12, state="readonly", font=(FONT, 10))
+        tk.Label(card, text="👷 Operator:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
+        op_combo = ttk.Combobox(card, values=op_opts, width=12, state="readonly", font=(FONT, 12))
         op_combo.grid(row=2, column=3, padx=5, pady=8)
         op_combo.set("All")
 
         style_opts = ["All"] + [s["style_code"] for s in styles]
-        tk.Label(card, text="🎨 Style:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=4, padx=(15, 5), pady=8, sticky="w")
-        style_combo = ttk.Combobox(card, values=style_opts, width=10, state="readonly", font=(FONT, 10))
+        tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=4, padx=(15, 5), pady=8, sticky="w")
+        style_combo = ttk.Combobox(card, values=style_opts, width=10, state="readonly", font=(FONT, 12))
         style_combo.grid(row=2, column=5, padx=5, pady=8)
         style_combo.set("All")
 
@@ -1339,7 +1339,7 @@ class LoomTrackerApp:
         results_inner = tk.Frame(results_card, bg=CARD_BG)
         results_inner.pack(fill="both", padx=15, pady=10)
         summary_var = tk.StringVar(value="")
-        tk.Label(results_card, textvariable=summary_var, font=(FONT, 10, "bold"),
+        tk.Label(results_card, textvariable=summary_var, font=(FONT, 12, "bold"),
                  bg=CARD_BG, fg=PRIMARY).pack(anchor="w", padx=15, pady=(0, 5))
 
         def search():
@@ -1366,7 +1366,7 @@ class LoomTrackerApp:
 
             rows = db.get_tracking_filtered(start_d, end_d, sel_loom_id, sel_op_id, sel_style_id, sel_shift)
             if not rows:
-                tk.Label(results_inner, text="No entries found.", font=(FONT, 11), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
+                tk.Label(results_inner, text="No entries found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 summary_var.set("0 entries found")
                 self._report_rows = []
                 return
@@ -1483,12 +1483,12 @@ class LoomTrackerApp:
 
         # Filter card
         card = self._make_card(scroll_frame)
-        tk.Label(card, text="💰  Salary Report", font=(FONT, 13, "bold"),
+        tk.Label(card, text="💰  Salary Report", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
-        tk.Label(card, text="📅 From:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         e_from = self._make_date_selector(card)
         e_from.grid(row=1, column=1, padx=5, pady=8)
-        tk.Label(card, text="📅 To:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         e_to = self._make_date_selector(card)
         e_to.grid(row=1, column=3, padx=5, pady=8)
         btn_frame = tk.Frame(card, bg=CARD_BG)
@@ -1506,7 +1506,7 @@ class LoomTrackerApp:
             rows = db.get_salary_report(start_d, end_d)
             if not rows:
                 tk.Label(results_inner, text="No salary data found for this period.",
-                         font=(FONT, 11), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
+                         font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 return
 
             # Aggregate by operator (summary) and keep detail rows
@@ -1545,7 +1545,7 @@ class LoomTrackerApp:
                 sf = tk.Frame(summary_frame, bg="#f8fafc", highlightthickness=1, highlightbackground=DIVIDER)
                 sf.pack(side="left", expand=True, fill="x", padx=4)
                 tk.Label(sf, text=lbl, font=(FONT, 9), bg="#f8fafc", fg=TEXT_LIGHT).pack(anchor="w", padx=12, pady=(8, 0))
-                tk.Label(sf, text=val, font=(FONT, 14, "bold"), bg="#f8fafc", fg=clr).pack(anchor="w", padx=12, pady=(0, 8))
+                tk.Label(sf, text=val, font=(FONT, 16, "bold"), bg="#f8fafc", fg=clr).pack(anchor="w", padx=12, pady=(0, 8))
 
             # Salary table with style detail (operator → style rows)
             cols = ("Operator", "Style", "Rate (₹/m)", "Shift", "Meters", "Wages (₹)")
@@ -1557,7 +1557,7 @@ class LoomTrackerApp:
             tree.column("Style", width=130, anchor="w")
             tree.tag_configure("even", background="#ffffff")
             tree.tag_configure("odd", background="#f8fafc")
-            tree.tag_configure("op_total", background="#eef2ff", font=(FONT, 10, "bold"))
+            tree.tag_configure("op_total", background="#eef2ff", font=(FONT, 12, "bold"))
             row_idx = 0
             for name in sorted(ops):
                 d = ops[name]
@@ -1590,16 +1590,16 @@ class LoomTrackerApp:
         loom_opts = ["All"] + [l["loom_number"] for l in looms]
 
         card = self._make_card(scroll_frame)
-        tk.Label(card, text="✂  Loom Cuts History", font=(FONT, 13, "bold"),
+        tk.Label(card, text="✂  Loom Cuts History", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
-        tk.Label(card, text="📅 From:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         cuts_from = self._make_date_selector(card)
         cuts_from.grid(row=1, column=1, padx=5, pady=8)
-        tk.Label(card, text="📅 To:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         cuts_to = self._make_date_selector(card)
         cuts_to.grid(row=1, column=3, padx=5, pady=8)
-        tk.Label(card, text="🏭 Loom:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
-        cuts_loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 10))
+        tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
+        cuts_loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
         cuts_loom_combo.grid(row=2, column=1, padx=5, pady=8)
         cuts_loom_combo.set("All")
         btn_frame = tk.Frame(card, bg=CARD_BG)
@@ -1609,7 +1609,7 @@ class LoomTrackerApp:
         results_inner = tk.Frame(results_card, bg=CARD_BG)
         results_inner.pack(fill="both", padx=15, pady=10)
         cuts_summary_var = tk.StringVar(value="")
-        tk.Label(results_card, textvariable=cuts_summary_var, font=(FONT, 10, "bold"),
+        tk.Label(results_card, textvariable=cuts_summary_var, font=(FONT, 12, "bold"),
                  bg=CARD_BG, fg=PRIMARY).pack(anchor="w", padx=15, pady=(0, 5))
 
         def search_cuts():
@@ -1624,7 +1624,7 @@ class LoomTrackerApp:
                         sel_loom_id = l["id"]; break
             rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_id)
             if not rows:
-                tk.Label(results_inner, text="No cuts found.", font=(FONT, 11), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
+                tk.Label(results_inner, text="No cuts found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 cuts_summary_var.set("0 cuts found")
                 return
             cuts_summary_var.set(f"✂  {len(rows)} cuts found")
