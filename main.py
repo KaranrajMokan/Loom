@@ -1335,11 +1335,18 @@ class LoomTrackerApp:
         e_sname = self._make_label_entry(card, "Style Name *", 2)
         e_price = self._make_label_entry(card, "Price (₹/m)", 3, default="0", numeric_only=True)
 
-        tk.Label(card, text="Status", font=(FONT, 12), bg=CARD_BG,
+        tk.Label(card, text="Category", font=(FONT, 12), bg=CARD_BG,
                  fg=TEXT_DARK).grid(row=4, column=0, sticky="w", padx=10, pady=6)
+        cat_combo = ttk.Combobox(card, values=["S", "D"], width=27,
+                                 state="readonly", font=(FONT, 12))
+        cat_combo.grid(row=4, column=1, sticky="w", padx=10, pady=6)
+        cat_combo.set("D")
+
+        tk.Label(card, text="Status", font=(FONT, 12), bg=CARD_BG,
+                 fg=TEXT_DARK).grid(row=5, column=0, sticky="w", padx=10, pady=6)
         active_combo = ttk.Combobox(card, values=["Active", "Inactive"], width=27,
                                      state="readonly", font=(FONT, 12))
-        active_combo.grid(row=4, column=1, sticky="w", padx=10, pady=6)
+        active_combo.grid(row=5, column=1, sticky="w", padx=10, pady=6)
         active_combo.set("Active")
 
         editing_id = [None]
@@ -1349,12 +1356,14 @@ class LoomTrackerApp:
             form_title.config(text="➕ Add New Style")
             e_code.delete(0, "end"); e_sname.delete(0, "end")
             e_price.delete(0, "end"); e_price.insert(0, "0")
+            cat_combo.set("D")
             active_combo.set("Active")
             add_btn.config(text="➕ Add Style")
 
         def add_or_update():
             code = e_code.get().strip()
             sname = e_sname.get().strip()
+            category = cat_combo.get()
             if not code or not sname:
                 messagebox.showwarning("Required", "Style code and name are required.")
                 return
@@ -1362,9 +1371,9 @@ class LoomTrackerApp:
                 price = float(e_price.get().strip() or "0")
                 if editing_id[0]:
                     is_active = 1 if active_combo.get() == "Active" else 0
-                    db.update_style(editing_id[0], code, sname, price, is_active)
+                    db.update_style(editing_id[0], code, sname, price, category, is_active)
                 else:
-                    db.add_style(code, sname, price)
+                    db.add_style(code, sname, price, category)
                 self.show_styles()
             except ValueError:
                 messagebox.showerror("Invalid", "Price must be a number.")
@@ -1372,7 +1381,7 @@ class LoomTrackerApp:
                 messagebox.showerror("Error", str(ex))
 
         btn_frame = tk.Frame(card, bg=CARD_BG)
-        btn_frame.grid(row=5, column=1, padx=10, pady=12, sticky="w")
+        btn_frame.grid(row=6, column=1, padx=10, pady=12, sticky="w")
         add_btn = self._make_button(btn_frame, "➕ Add Style", add_or_update, color=SUCCESS)
         add_btn.pack(side="left", padx=(0, 8))
         self._make_button(btn_frame, "🗑 Clear", clear_form, color=WARNING_CLR, width=8).pack(side="left")
@@ -1380,7 +1389,7 @@ class LoomTrackerApp:
         list_card = self._make_card(self.content)
         tk.Label(list_card, text="All Dhothi Styles  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
-        cols = ("ID", "Code", "Name", "Price (₹/m)", "Status")
+        cols = ("ID", "Code", "Name", "Category", "Price (₹/m)", "Status")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
         for col in cols:
             tree.heading(col, text=col)
@@ -1388,8 +1397,9 @@ class LoomTrackerApp:
         for idx, s in enumerate(db.get_all_styles()):
             active = "Active" if s["is_active"] else "Inactive"
             tag = "even" if idx % 2 == 0 else "odd"
+            cat = s["style_category"] if s["style_category"] else "D"
             tree.insert("", "end", values=(s["id"], s["style_code"],
-                        s["style_name"], f"₹{s['price']:.2f}", active), tags=(tag,))
+                        s["style_name"], cat, f"₹{s['price']:.2f}", active), tags=(tag,))
         tree.tag_configure("even", background="#ffffff")
         tree.tag_configure("odd", background="#f8fafc")
         tree.pack(fill="x", padx=15, pady=(0, 12))
@@ -1403,6 +1413,7 @@ class LoomTrackerApp:
             form_title.config(text=f"✏️ Edit Style: {vals[1]}")
             e_code.delete(0, "end"); e_code.insert(0, vals[1])
             e_sname.delete(0, "end"); e_sname.insert(0, vals[2])
+            cat_combo.set(vals[3])
             e_price.delete(0, "end")
             # Strip ₹ prefix from price value
             price_str = vals[3].replace("₹", "").strip()

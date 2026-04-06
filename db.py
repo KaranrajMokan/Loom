@@ -56,6 +56,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             style_code TEXT UNIQUE NOT NULL,
             style_name TEXT NOT NULL,
+            style_category TEXT DEFAULT D,
             price REAL DEFAULT 0.0,
             is_active INTEGER DEFAULT 1,
             created_at TEXT DEFAULT (datetime('now','localtime'))
@@ -185,10 +186,10 @@ def update_operator(op_id, name, spouse_name, phone, address, date_joined, is_ac
 
 
 # ── Style CRUD ──
-def add_style(style_code, style_name, price=0.0):
+def add_style(style_code, style_name, price=0.0, category="D"):
     conn = get_connection()
-    conn.execute("INSERT INTO dhothi_styles (style_code, style_name, price) VALUES (?,?,?)",
-                 (style_code, style_name, price))
+    conn.execute("INSERT INTO dhothi_styles (style_code, style_name, price, style_category) VALUES (?,?,?,?)",
+                 (style_code, style_name, price, category))
     conn.commit()
     conn.close()
 
@@ -207,10 +208,10 @@ def get_active_styles():
     return rows
 
 
-def update_style(style_id, style_code, style_name, price, is_active):
+def update_style(style_id, style_code, style_name, price, category, is_active):
     conn = get_connection()
-    conn.execute("UPDATE dhothi_styles SET style_code=?, style_name=?, price=?, is_active=? WHERE id=?",
-                 (style_code, style_name, price, is_active, style_id))
+    conn.execute("UPDATE dhothi_styles SET style_code=?, style_name=?, price=?, style_category=?, is_active=? WHERE id=?",
+                 (style_code, style_name, price, category, is_active, style_id))
     conn.commit()
     conn.close()
 
