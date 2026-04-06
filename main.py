@@ -747,10 +747,10 @@ class LoomTrackerApp:
         tk.Frame(shift_card, bg=PRIMARY, height=3).pack(fill="x")
         shift_inner = tk.Frame(shift_card, bg=CARD_BG)
         shift_inner.pack(fill="x", padx=5)
-        tk.Label(shift_inner, text="☀️  Shift:", font=(FONT, 13, "bold"),
+        tk.Label(shift_inner, text="Shift:", font=(FONT, 13, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, padx=15, pady=14, sticky="w")
-        shift_var = tk.StringVar(value="Day")
-        for i, s in enumerate(["Day", "Night"]):
+        shift_var = tk.StringVar(value="Night")
+        for i, s in enumerate(["Night", "Day"]):
             tk.Radiobutton(shift_inner, text=s, variable=shift_var, value=s,
                            font=(FONT, 13), bg=CARD_BG, fg=TEXT_DARK,
                            activebackground=CARD_BG, activeforeground=TEXT_DARK,
