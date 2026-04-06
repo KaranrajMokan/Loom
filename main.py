@@ -1396,8 +1396,10 @@ class LoomTrackerApp:
                 self._build_salary_report(view_container)
             elif tab_name == "cuts":
                 self._build_cuts_report(view_container)
+            elif tab_name == "remaining":
+                self._build_remaining_report(view_container)
 
-        tabs = [("📊  Production", "production"), ("💰  Salary", "salary"), ("✂  Loom Cuts", "cuts")]
+        tabs = [("📊  Production", "production"), ("💰  Salary", "salary"), ("✂  Loom Cuts", "cuts"), ("🧵  Remaining Loom", "remaining")]
         for label, key in tabs:
             frame = tk.Frame(tab_bar, bg=TAB_INACTIVE_BG, cursor="hand2")
             frame.pack(side="left", padx=(0, 1))
@@ -1789,6 +1791,109 @@ class LoomTrackerApp:
 
         self._make_button(btn_frame, "🔍 Search Cuts", search_cuts, color=PRIMARY, width=12).pack(side="left", padx=(0, 8))
         search_cuts()
+
+    # ── Remaining Loom Report ──
+    def _build_remaining_report(self, parent):
+        canvas, scroll_frame = self._make_scrollable(parent)
+
+        # Data for filters
+        looms = db.get_active_looms()
+        loom_opts = ["All"] + [l["loom_number"] for l in looms]
+        styles = db.get_active_styles()
+        style_opts = ["All"] + [s["style_code"] for s in styles]
+        locations = ["All"] + sorted(list(set(l["location"] for l in looms if l["location"].strip())))
+
+        # Filter Card
+        card = self._make_card(scroll_frame)
+        tk.Label(card, text="🧵  Remaining Fabric in Looms", font=(FONT, 15, "bold"),
+                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=6, padx=15, pady=(12, 5), sticky="w")
+
+        tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        rem_loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
+        rem_loom_combo.grid(row=1, column=1, padx=5, pady=8)
+        rem_loom_combo.set("All")
+
+        tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+        rem_style_combo = ttk.Combobox(card, values=style_opts, width=12, state="readonly", font=(FONT, 12))
+        rem_style_combo.grid(row=1, column=3, padx=5, pady=8)
+        rem_style_combo.set("All")
+
+        tk.Label(card, text="📍 Location:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
+        rem_loc_combo = ttk.Combobox(card, values=locations, width=15, state="readonly", font=(FONT, 12))
+        rem_loc_combo.grid(row=1, column=5, padx=5, pady=8)
+        rem_loc_combo.set("All")
+
+        btn_frame = tk.Frame(card, bg=CARD_BG)
+        btn_frame.grid(row=2, column=0, columnspan=6, padx=15, pady=(5, 12), sticky="w")
+
+        # Results Card
+        results_card = self._make_card(scroll_frame)
+        results_inner = tk.Frame(results_card, bg=CARD_BG)
+        results_inner.pack(fill="both", padx=15, pady=10)
+        rem_summary_var = tk.StringVar(value="")
+        tk.Label(results_card, textvariable=rem_summary_var, font=(FONT, 12, "bold"),
+                 bg=CARD_BG, fg=PRIMARY).pack(anchor="w", padx=15, pady=(0, 5))
+
+        def search_remaining():
+            for w in results_inner.winfo_children():
+                w.destroy()
+
+            sel_loom_id = None
+            if rem_loom_combo.get() != "All":
+                for l in looms:
+                    if l["loom_number"] == rem_loom_combo.get():
+                        sel_loom_id = l["id"]; break
+
+            sel_style_id = None
+            if rem_style_combo.get() != "All":
+                for s in styles:
+                    if s["style_code"] == rem_style_combo.get():
+                        sel_style_id = s["id"]; break
+
+            sel_loc = rem_loc_combo.get()
+
+            rows = db.get_remaining_looms_filtered(sel_loom_id, sel_style_id, sel_loc)
+
+            if not rows:
+                tk.Label(results_inner, text="No active looms matched filters.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
+                rem_summary_var.set("0 looms found")
+                return
+
+            cols = ("Loom Number", "Location", "Current Style", "Remaining in Machine (m)")
+            tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=15)
+            scroll = ttk.Scrollbar(results_inner, orient="vertical", command=tree.yview)
+            tree.configure(yscrollcommand=scroll.set)
+
+            for col in cols:
+                tree.heading(col, text=col)
+                tree.column(col, width=150, anchor="center")
+            tree.column("Location", width=180, anchor="w")
+
+            total_remaining = 0.0
+            for idx, r in enumerate(rows):
+                tag = "even" if idx % 2 == 0 else "odd"
+                style_display = f"{r['style_code']} ({r['style_name']})" if r['style_code'] != '—' else '—'
+                total_remaining += r["current_length"]
+
+                # Highlight looms over the 80m limit in light red
+                if r["current_length"] >= LOOM_LIMIT:
+                    tag = "warning"
+
+                tree.insert("", "end", values=(
+                    r["loom_number"], r["location"], style_display,
+                    f"{r['current_length']:.1f}"
+                ), tags=(tag,))
+
+            tree.tag_configure("even", background="#ffffff")
+            tree.tag_configure("odd", background="#f8fafc")
+            tree.tag_configure("warning", background="#fef2f2", foreground=DANGER)
+
+            tree.pack(side="left", fill="both", expand=True)
+            scroll.pack(side="right", fill="y")
+            rem_summary_var.set(f"🧵  {len(rows)} looms found  |  Total Fabric in Production: {total_remaining:.1f}m ")
+
+        self._make_button(btn_frame, "🔍 Search", search_remaining, color=PRIMARY, width=12).pack(side="left", padx=(0, 8))
+        search_remaining()
 
 
 # ══════════════════════════════════════════════════

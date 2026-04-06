@@ -417,6 +417,38 @@ def get_loom_resets_filtered(start_date=None, end_date=None, loom_id=None, style
     return rows
 
 
+def get_remaining_looms_filtered(loom_id=None, style_id=None, location=None):
+    """Fetch current length in looms, with optional filters for loom, style, and location."""
+    conn = get_connection()
+    query = """SELECT l.loom_number, l.location, l.current_length,
+                      COALESCE(ds.style_code, '—') as style_code,
+                      COALESCE(ds.style_name, '—') as style_name
+               FROM looms l
+               LEFT JOIN daily_tracking dt ON dt.id = (
+                   SELECT id FROM daily_tracking
+                   WHERE loom_id = l.id
+                   ORDER BY tracking_date DESC, id DESC LIMIT 1
+               )
+               LEFT JOIN dhothi_styles ds ON dt.style_id = ds.id
+               WHERE l.status = 'Active'"""
+
+    params = []
+    if loom_id:
+        query += " AND l.id = ?"
+        params.append(loom_id)
+    if style_id:
+        query += " AND ds.id = ?"
+        params.append(style_id)
+    if location and location != "All":
+        query += " AND l.location = ?"
+        params.append(location)
+
+    query += " ORDER BY l.loom_number"
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return rows
+
+
 def get_salary_report(start_date, end_date):
     """Get salary breakdown per operator per style per shift."""
     conn = get_connection()
