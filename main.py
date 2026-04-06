@@ -77,6 +77,7 @@ class LoomTrackerApp:
         nav_items = [
             ("📊  Dashboard", self.show_dashboard),
             ("📝  Daily Entry", self.show_daily_entry),
+            ("📓  Loom Ledger", self.show_loom_ledger),
             ("🏭  Looms", self.show_looms),
             ("👷  Operators", self.show_operators),
             ("🎨  Dhothi Styles", self.show_styles),
@@ -953,6 +954,110 @@ class LoomTrackerApp:
             msg += "\nGo to Dashboard to reset or skip."
             messagebox.showwarning("⚠️ Over 80m", msg)
         self.show_daily_entry()
+
+    # ══════════════════════════════════════════════════
+    # LOOM LEDGER (BOOK VIEW)
+    # ══════════════════════════════════════════════════
+    def show_loom_ledger(self):
+        self._clear_content()
+        self._set_active_nav("📓  Loom Ledger")
+        self._make_header("Loom Ledger (Physical Book View)")
+
+        canvas, scroll_frame = self._make_scrollable(self.content)
+        looms = db.get_active_looms()
+        loom_opts = [f"{l['loom_number']}" for l in looms]
+
+        # Top Control Card
+        card = self._make_card(scroll_frame)
+        tk.Label(card, text="🏭 Select Loom to View Ledger:", font=(FONT, 11, "bold"), 
+                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, padx=(15, 5), pady=12, sticky="w")
+        
+        loom_combo = ttk.Combobox(card, values=loom_opts, width=15, state="readonly", font=(FONT, 11))
+        loom_combo.grid(row=0, column=1, padx=5, pady=12)
+
+        # Container for the table
+        results_inner = tk.Frame(scroll_frame, bg=BG)
+        results_inner.pack(fill="both", expand=True, padx=30, pady=10)
+
+        def load_ledger(*args):
+            for w in results_inner.winfo_children(): w.destroy()
+            sel_num = loom_combo.get()
+            if not sel_num: return
+            
+            sel_loom_id = next((l["id"] for l in looms if str(l["loom_number"]) == sel_num), None)
+
+            # Fetch all history for this loom (using wide date range)
+            entries = db.get_tracking_filtered("2000-01-01", "2100-01-01", sel_loom_id, None, None, None)
+            cuts = db.get_loom_resets_filtered("2000-01-01", "2100-01-01", sel_loom_id)
+
+            timeline = []
+            
+            # Process Daily Entries
+            if entries:
+                for e in entries:
+                    timeline.append({
+                        "type": "entry",
+                        "date": e["tracking_date"],
+                        "shift": e["shift"],
+                        "prod": e["length_produced"],
+                        "stock": e["loom_length_after"],
+                        "operator": e["operator_name"]
+                    })
+                    
+            # Process Cuts
+            if cuts:
+                for c in cuts:
+                    if not c["was_skipped"]:
+                        cut_val = c["length_at_reset"] - (c["remaining_length"] if c["remaining_length"] else 0.0)
+                        timeline.append({
+                            "type": "cut",
+                            "date": c["reset_date"],
+                            "shift": "Cut", 
+                            "cut_val": cut_val,
+                            "stock": c["remaining_length"] if c["remaining_length"] else 0.0,
+                            "operator": c["operator_name"]
+                        })
+
+            # Sort chronologically: By Date -> Day Shift -> Night Shift -> Cuts
+            shift_order = {"Day": 0, "Night": 1, "Cut": 2}
+            timeline.sort(key=lambda x: (x["date"], shift_order.get(x["shift"], 3)))
+
+            # Build Treeview Table
+            cols = ("Date", "Day Shift", "Night Shift", "Current Stock (m)", "Cut Off (m)")
+            tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=20)
+            
+            for col in cols:
+                tree.heading(col, text=col)
+                tree.column(col, width=130, anchor="center")
+
+            for idx, row in enumerate(timeline):
+                tag = "even" if idx % 2 == 0 else "odd"
+                day_val, night_val, cut_val = "", "", ""
+
+                if row["type"] == "entry":
+                    val_str = f"{row['prod']:.1f} ({row['operator']})"
+                    if row["shift"] == "Day":
+                        day_val = val_str
+                    else:
+                        night_val = val_str
+                elif row["type"] == "cut":
+                    cut_val = f"{row['cut_val']:.1f}"
+
+                tree.insert("", "end", values=(
+                    row["date"],
+                    day_val,
+                    night_val,
+                    f"{row['stock']:.1f}",
+                    cut_val
+                ), tags=(tag,))
+
+            tree.tag_configure("even", background="#ffffff")
+            tree.tag_configure("odd", background="#f8fafc")
+            tree.pack(fill="both", expand=True)
+
+        # Trigger data load whenever a loom is selected from dropdown
+        loom_combo.bind("<<ComboboxSelected>>", load_ledger)
+
 
     # ══════════════════════════════════════════════════
     # MANAGE LOOMS

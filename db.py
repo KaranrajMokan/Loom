@@ -3,8 +3,7 @@ Database module for Loom Tracker.
 All SQLite operations for looms, operators, styles, and daily tracking.
 """
 import sqlite3
-import os
-from datetime import datetime, date
+from datetime import date
 
 DB_PATH = "loom_tracker.db"
 
