@@ -1,4 +1,10 @@
 .venv/
 __pycache__
-loom_tracker.db
-business_data.db
+.DS_Store
+build/
+dist/
+*.spec
+*.log
+*.pdf
+*.csv
+*.db

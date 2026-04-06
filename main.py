@@ -8,6 +8,8 @@ from datetime import date
 import calendar as cal_mod
 import csv
 import db
+import sys
+import os
 
 
 # ── Modern colour palette & constants ──
@@ -34,6 +36,17 @@ FONT = "Helvetica Neue" if __import__("sys").platform == "darwin" else "Segoe UI
 FONT_MONO = "SF Mono" if __import__("sys").platform == "darwin" else "Consolas"
 LOOM_LIMIT = 80.0
 IS_MAC = __import__("sys").platform == "darwin"
+
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
 class LoomTrackerApp:
@@ -1541,7 +1554,7 @@ class LoomTrackerApp:
 
             pdf = FPDF(orientation='L', unit='mm', format='A4')
             pdf.add_page()
-            pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
+            pdf.add_font("DejaVu", "B", resource_path("DejaVuSans-Bold.ttf"), uni=True)
             pdf.set_font("Helvetica", "B", 16)
             pdf.cell(0, 10, f"Loom Production Report - {date.today().isoformat()}", ln=True, align='C')
             pdf.ln(10)

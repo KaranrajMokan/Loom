@@ -3,6 +3,19 @@ from tkinter import messagebox, filedialog
 import sqlite3
 import csv
 import os
+import sys
+
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 class BusinessApp:
     def __init__(self, root):
@@ -11,7 +24,7 @@ class BusinessApp:
         self.root.geometry("500x500")
         
         # Database setup
-        self.db_path = "business_data.db"
+        self.db_path = resource_path("business_data.db")
         self.init_db()
 
         # UI Layout
