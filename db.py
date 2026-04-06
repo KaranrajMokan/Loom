@@ -343,9 +343,9 @@ def get_last_entry_for_loom_shift(loom_id, shift):
     return row
 
 
-def get_tracking_filtered(start_date=None, end_date=None, loom_id=None,
-                          operator_id=None, style_id=None, shift=None):
-    """Get tracking entries with optional filters."""
+def get_tracking_filtered(start_date=None, end_date=None, loom_ids=None,
+                          operator_ids=None, style_ids=None, shifts=None):
+    """Get tracking entries with multi-select optional filters."""
     conn = get_connection()
     query = """SELECT dt.*, l.loom_number, o.name as operator_name,
                       ds.style_code, ds.style_name, ds.price as style_price,
@@ -362,26 +362,33 @@ def get_tracking_filtered(start_date=None, end_date=None, loom_id=None,
     if end_date:
         query += " AND dt.tracking_date <= ?"
         params.append(end_date)
-    if loom_id:
-        query += " AND dt.loom_id = ?"
-        params.append(loom_id)
-    if operator_id:
-        query += " AND dt.operator_id = ?"
-        params.append(operator_id)
-    if style_id:
-        query += " AND dt.style_id = ?"
-        params.append(style_id)
-    if shift:
-        query += " AND dt.shift = ?"
-        params.append(shift)
+    if loom_ids is not None:
+        if not loom_ids: return []
+        placeholders = ",".join("?" * len(loom_ids))
+        query += f" AND dt.loom_id IN ({placeholders})"
+        params.extend(loom_ids)
+    if operator_ids is not None:
+        if not operator_ids: return []
+        placeholders = ",".join("?" * len(operator_ids))
+        query += f" AND dt.operator_id IN ({placeholders})"
+        params.extend(operator_ids)
+    if style_ids is not None:
+        if not style_ids: return []
+        placeholders = ",".join("?" * len(style_ids))
+        query += f" AND dt.style_id IN ({placeholders})"
+        params.extend(style_ids)
+    if shifts is not None:
+        if not shifts: return []
+        placeholders = ",".join("?" * len(shifts))
+        query += f" AND dt.shift IN ({placeholders})"
+        params.extend(shifts)
     query += " ORDER BY dt.tracking_date DESC, dt.shift, l.loom_number"
     rows = conn.execute(query, params).fetchall()
     conn.close()
     return rows
 
 
-
-def get_loom_resets_filtered(start_date=None, end_date=None, loom_id=None, style_id=None):
+def get_loom_resets_filtered(start_date=None, end_date=None, loom_ids=None, style_ids=None):
     """Get loom reset/cut history with optional filters, including operator name and dhothi style."""
     conn = get_connection()
     query = """SELECT lr.*, l.loom_number,
@@ -405,19 +412,23 @@ def get_loom_resets_filtered(start_date=None, end_date=None, loom_id=None, style
     if end_date:
         query += " AND lr.reset_date <= ?"
         params.append(end_date)
-    if loom_id:
-        query += " AND lr.loom_id = ?"
-        params.append(loom_id)
-    if style_id:
-        query += " AND ds.id = ?"
-        params.append(style_id)
+    if loom_ids is not None:
+        if not loom_ids: return []
+        placeholders = ",".join("?" * len(loom_ids))
+        query += f" AND lr.loom_id IN ({placeholders})"
+        params.extend(loom_ids)
+    if style_ids is not None:
+        if not style_ids: return []
+        placeholders = ",".join("?" * len(style_ids))
+        query += f" AND ds.id IN ({placeholders})"
+        params.extend(style_ids)
     query += " ORDER BY lr.reset_date DESC, lr.created_at DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()
     return rows
 
 
-def get_remaining_looms_filtered(loom_id=None, style_id=None, location=None):
+def get_remaining_looms_filtered(loom_ids=None, style_ids=None, locations=None):
     """Fetch current length in looms, with optional filters for loom, style, and location."""
     conn = get_connection()
     query = """SELECT l.loom_number, l.location, l.current_length,
@@ -433,15 +444,21 @@ def get_remaining_looms_filtered(loom_id=None, style_id=None, location=None):
                WHERE l.status = 'Active'"""
 
     params = []
-    if loom_id:
-        query += " AND l.id = ?"
-        params.append(loom_id)
-    if style_id:
-        query += " AND ds.id = ?"
-        params.append(style_id)
-    if location and location != "All":
-        query += " AND l.location = ?"
-        params.append(location)
+    if loom_ids is not None:
+        if not loom_ids: return []
+        placeholders = ",".join("?" * len(loom_ids))
+        query += f" AND l.id IN ({placeholders})"
+        params.extend(loom_ids)
+    if style_ids is not None:
+        if not style_ids: return []
+        placeholders = ",".join("?" * len(style_ids))
+        query += f" AND ds.id IN ({placeholders})"
+        params.extend(style_ids)
+    if locations is not None:
+        if not locations: return []
+        placeholders = ",".join("?" * len(locations))
+        query += f" AND l.location IN ({placeholders})"
+        params.extend(locations)
 
     query += " ORDER BY l.loom_number"
     rows = conn.execute(query, params).fetchall()

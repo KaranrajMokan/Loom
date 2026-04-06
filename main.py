@@ -49,6 +49,62 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
+class MultiSelectDropdown(tk.Menubutton):
+    def __init__(self, parent, choices, **kwargs):
+        super().__init__(parent, indicatoron=True, borderwidth=1, relief="solid", 
+                         bg=ENTRY_BG, fg=ENTRY_FG, activebackground=CARD_BG, **kwargs)
+        self.menu = tk.Menu(self, tearoff=False, bg=CARD_BG, fg=TEXT_DARK)
+        self.configure(menu=self.menu)
+        
+        self.choices = choices
+        self.vars = {}
+        
+        # "Select All" toggle
+        self.all_var = tk.BooleanVar(value=True)
+        self.menu.add_checkbutton(label="✓ Select All", variable=self.all_var, command=self._toggle_all)
+        self.menu.add_separator()
+        
+        # Add individual choices
+        for choice in choices:
+            var = tk.BooleanVar(value=True)
+            self.vars[choice] = var
+            self.menu.add_checkbutton(label=choice, variable=var, command=self._check_state)
+            
+        self._update_text()
+
+    def _toggle_all(self):
+        state = self.all_var.get()
+        for var in self.vars.values():
+            var.set(state)
+        self._update_text()
+        
+    def _check_state(self):
+        all_checked = all(var.get() for var in self.vars.values())
+        self.all_var.set(all_checked)
+        self._update_text()
+        
+    def _update_text(self):
+        selected = self.get_selected()
+        if len(selected) == len(self.choices):
+            self.configure(text="All Selected")
+        elif len(selected) == 0:
+            self.configure(text="None Selected")
+        elif len(selected) == 1:
+            self.configure(text=selected[0])
+        else:
+            self.configure(text=f"{len(selected)} Selected")
+
+    def get_selected(self):
+        return [choice for choice, var in self.vars.items() if var.get()]
+
+    def select_all(self):
+        """Programmatically check all boxes and update the text."""
+        self.all_var.set(True)
+        for var in self.vars.values():
+            var.set(True)
+        self._update_text()
+
+
 class LoomTrackerApp:
     def __init__(self, root):
         self.root = root
@@ -997,11 +1053,11 @@ class LoomTrackerApp:
             sel_num = loom_combo.get()
             if not sel_num: return
             
-            sel_loom_id = next((l["id"] for l in looms if str(l["loom_number"]) == sel_num), None)
+            sel_loom_ids = [next((l["id"] for l in looms if str(l["loom_number"]) == sel_num), None)]
 
             # Fetch all history for this loom (using wide date range)
-            entries = db.get_tracking_filtered("2000-01-01", "2100-01-01", sel_loom_id, None, None, None)
-            cuts = db.get_loom_resets_filtered("2000-01-01", "2100-01-01", sel_loom_id)
+            entries = db.get_tracking_filtered("2000-01-01", "2100-01-01", sel_loom_ids, None, None, None)
+            cuts = db.get_loom_resets_filtered("2000-01-01", "2100-01-01", sel_loom_ids)
 
             timeline = []
             
@@ -1433,27 +1489,23 @@ class LoomTrackerApp:
         e_to = self._make_date_selector(card)
         e_to.grid(row=1, column=3, padx=5, pady=8)
         tk.Label(card, text="Shift:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
-        shift_combo = ttk.Combobox(card, values=["All", "Day", "Night"], width=8, state="readonly", font=(FONT, 12))
+        shift_combo = MultiSelectDropdown(card, choices=["Day", "Night"], width=12, font=(FONT, 10))
         shift_combo.grid(row=1, column=5, padx=5, pady=8)
-        shift_combo.set("All")
 
-        loom_opts = ["All"] + [l["loom_number"] for l in looms]
+        loom_opts = [l["loom_number"] for l in looms]
         tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
-        loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
+        loom_combo = MultiSelectDropdown(card, choices=loom_opts, width=12, font=(FONT, 10))
         loom_combo.grid(row=2, column=1, padx=5, pady=8)
-        loom_combo.set("All")
 
-        op_opts = ["All"] + [o["name"] for o in operators]
+        op_opts = [o["name"] for o in operators]
         tk.Label(card, text="👷 Operator:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
-        op_combo = ttk.Combobox(card, values=op_opts, width=12, state="readonly", font=(FONT, 12))
+        op_combo = MultiSelectDropdown(card, choices=op_opts, width=12, font=(FONT, 10))
         op_combo.grid(row=2, column=3, padx=5, pady=8)
-        op_combo.set("All")
 
-        style_opts = ["All"] + [s["style_code"] for s in styles]
+        style_opts = [s["style_code"] for s in styles]
         tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=4, padx=(15, 5), pady=8, sticky="w")
-        style_combo = ttk.Combobox(card, values=style_opts, width=10, state="readonly", font=(FONT, 12))
+        style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 10))
         style_combo.grid(row=2, column=5, padx=5, pady=8)
-        style_combo.set("All")
 
         btn_frame = tk.Frame(card, bg=CARD_BG)
         btn_frame.grid(row=3, column=0, columnspan=6, padx=15, pady=(5, 12), sticky="w")
@@ -1470,24 +1522,16 @@ class LoomTrackerApp:
                 w.destroy()
             start_d = e_from.get_date().isoformat()
             end_d = e_to.get_date().isoformat()
-            sel_shift = shift_combo.get() if shift_combo.get() != "All" else None
-            sel_loom_id = None
-            if loom_combo.get() != "All":
-                for l in looms:
-                    if l["loom_number"] == loom_combo.get():
-                        sel_loom_id = l["id"]; break
-            sel_op_id = None
-            if op_combo.get() != "All":
-                for o in operators:
-                    if o["name"] == op_combo.get():
-                        sel_op_id = o["id"]; break
-            sel_style_id = None
-            if style_combo.get() != "All":
-                for s in styles:
-                    if s["style_code"] == style_combo.get():
-                        sel_style_id = s["id"]; break
+            sel_shifts = shift_combo.get_selected()
+            sel_looms = loom_combo.get_selected()
+            sel_ops = op_combo.get_selected()
+            sel_styles = style_combo.get_selected()
 
-            rows = db.get_tracking_filtered(start_d, end_d, sel_loom_id, sel_op_id, sel_style_id, sel_shift)
+            sel_loom_ids = [l["id"] for l in looms if l["loom_number"] in sel_looms]
+            sel_op_ids = [o["id"] for o in operators if o["name"] in sel_ops]
+            sel_style_ids = [s["id"] for s in styles if s["style_code"] in sel_styles]
+
+            rows = db.get_tracking_filtered(start_d, end_d, sel_loom_ids, sel_op_ids, sel_style_ids, sel_shifts)
             if not rows:
                 tk.Label(results_inner, text="No entries found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 summary_var.set("0 entries found")
@@ -1593,9 +1637,12 @@ class LoomTrackerApp:
         self._make_button(btn_frame, "📄 Export PDF", export_pdf, color="#e11d48", width=12).pack(side="left", padx=5)
 
         def clear_filters():
-            e_from.set_date(date.today()); e_to.set_date(date.today())
-            shift_combo.set("All"); loom_combo.set("All")
-            op_combo.set("All"); style_combo.set("All")
+            e_from.set_date(date.today())
+            e_to.set_date(date.today())
+            shift_combo.select_all()
+            loom_combo.select_all()
+            op_combo.select_all()
+            style_combo.select_all()
             search()
         self._make_button(btn_frame, "🗑 Clear", clear_filters, color=WARNING_CLR, width=10).pack(side="left", padx=5)
         search()
@@ -1710,9 +1757,9 @@ class LoomTrackerApp:
     def _build_cuts_report(self, parent):
         canvas, scroll_frame = self._make_scrollable(parent)
         looms = db.get_active_looms()
-        loom_opts = ["All"] + [l["loom_number"] for l in looms]
+        loom_opts = [l["loom_number"] for l in looms]
         styles = db.get_active_styles()
-        style_opts = ["All"] + [s["style_code"] for s in styles]
+        style_opts = [s["style_code"] for s in styles]
 
         card = self._make_card(scroll_frame)
         tk.Label(card, text="✂  Loom Cuts History", font=(FONT, 15, "bold"),
@@ -1724,13 +1771,11 @@ class LoomTrackerApp:
         cuts_to = self._make_date_selector(card)
         cuts_to.grid(row=1, column=3, padx=5, pady=8)
         tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
-        cuts_loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
+        cuts_loom_combo = MultiSelectDropdown(card, choices=loom_opts, width=12, font=(FONT, 12))
         cuts_loom_combo.grid(row=2, column=1, padx=5, pady=8)
-        cuts_loom_combo.set("All")
         tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
-        cuts_style_combo = ttk.Combobox(card, values=style_opts, width=12, state="readonly", font=(FONT, 12))
+        cuts_style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 12))
         cuts_style_combo.grid(row=2, column=3, padx=5, pady=8)
-        cuts_style_combo.set("All")
         btn_frame = tk.Frame(card, bg=CARD_BG)
         btn_frame.grid(row=3, column=0, columnspan=4, padx=15, pady=(5, 12), sticky="w")
 
@@ -1746,17 +1791,12 @@ class LoomTrackerApp:
                 w.destroy()
             start_d = cuts_from.get_date().isoformat()
             end_d = cuts_to.get_date().isoformat()
-            sel_loom_id = None
-            if cuts_loom_combo.get() != "All":
-                for l in looms:
-                    if l["loom_number"] == cuts_loom_combo.get():
-                        sel_loom_id = l["id"]; break
-            sel_style_id = None
-            if cuts_style_combo.get() != "All":
-                for s in styles:
-                    if s["style_code"] == cuts_style_combo.get():
-                        sel_style_id = s["id"]; break
-            rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_id, sel_style_id)
+            sel_looms = cuts_loom_combo.get_selected()
+            sel_styles = cuts_style_combo.get_selected()
+
+            sel_loom_ids = [l["id"] for l in looms if l["loom_number"] in sel_looms]
+            sel_style_ids = [s["id"] for s in styles if s["style_code"] in sel_styles]
+            rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_ids, sel_style_ids)
             if not rows:
                 tk.Label(results_inner, text="No cuts found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 cuts_summary_var.set("0 cuts found")
@@ -1798,10 +1838,10 @@ class LoomTrackerApp:
 
         # Data for filters
         looms = db.get_active_looms()
-        loom_opts = ["All"] + [l["loom_number"] for l in looms]
+        loom_opts = [l["loom_number"] for l in looms]
         styles = db.get_active_styles()
-        style_opts = ["All"] + [s["style_code"] for s in styles]
-        locations = ["All"] + sorted(list(set(l["location"] for l in looms if l["location"].strip())))
+        style_opts = [s["style_code"] for s in styles]
+        locations = sorted(list(set(l["location"] for l in looms if l["location"].strip())))
 
         # Filter Card
         card = self._make_card(scroll_frame)
@@ -1809,19 +1849,16 @@ class LoomTrackerApp:
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=6, padx=15, pady=(12, 5), sticky="w")
 
         tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
-        rem_loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
+        rem_loom_combo = MultiSelectDropdown(card, choices=loom_opts, width=12, font=(FONT, 12))
         rem_loom_combo.grid(row=1, column=1, padx=5, pady=8)
-        rem_loom_combo.set("All")
 
         tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
-        rem_style_combo = ttk.Combobox(card, values=style_opts, width=12, state="readonly", font=(FONT, 12))
+        rem_style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 12))
         rem_style_combo.grid(row=1, column=3, padx=5, pady=8)
-        rem_style_combo.set("All")
 
         tk.Label(card, text="📍 Location:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
-        rem_loc_combo = ttk.Combobox(card, values=locations, width=15, state="readonly", font=(FONT, 12))
+        rem_loc_combo = MultiSelectDropdown(card, choices=locations, width=12, font=(FONT, 12))
         rem_loc_combo.grid(row=1, column=5, padx=5, pady=8)
-        rem_loc_combo.set("All")
 
         btn_frame = tk.Frame(card, bg=CARD_BG)
         btn_frame.grid(row=2, column=0, columnspan=6, padx=15, pady=(5, 12), sticky="w")
@@ -1838,21 +1875,13 @@ class LoomTrackerApp:
             for w in results_inner.winfo_children():
                 w.destroy()
 
-            sel_loom_id = None
-            if rem_loom_combo.get() != "All":
-                for l in looms:
-                    if l["loom_number"] == rem_loom_combo.get():
-                        sel_loom_id = l["id"]; break
+            sel_looms = rem_loom_combo.get_selected()
+            sel_styles = rem_style_combo.get_selected()
+            sel_loom_ids = [l["id"] for l in looms if l["loom_number"] in sel_looms]
+            sel_style_ids = [s["id"] for s in styles if s["style_code"] in sel_styles]
+            sel_locs = rem_loc_combo.get_selected()
 
-            sel_style_id = None
-            if rem_style_combo.get() != "All":
-                for s in styles:
-                    if s["style_code"] == rem_style_combo.get():
-                        sel_style_id = s["id"]; break
-
-            sel_loc = rem_loc_combo.get()
-
-            rows = db.get_remaining_looms_filtered(sel_loom_id, sel_style_id, sel_loc)
+            rows = db.get_remaining_looms_filtered(sel_loom_ids, sel_style_ids, sel_locs)
 
             if not rows:
                 tk.Label(results_inner, text="No active looms matched filters.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
