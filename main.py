@@ -1014,7 +1014,8 @@ class LoomTrackerApp:
                         "shift": e["shift"],
                         "prod": e["length_produced"],
                         "stock": e["loom_length_after"],
-                        "operator": e["operator_name"]
+                        "operator": e["operator_name"],
+                        "comment": e["comment"]
                     })
                     
             # Process Cuts
@@ -1036,7 +1037,7 @@ class LoomTrackerApp:
             timeline.sort(key=lambda x: (x["date"], shift_order.get(x["shift"], 3)))
 
             # Build Treeview Table
-            cols = ("Date", "Day Shift", "Night Shift", "Current Stock (m)", "Cut Off (m)")
+            cols = ("Date", "Night Shift", "Day Shift", "Current Stock (m)", "Cut Off (m)", "Comment")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=20)
             
             for col in cols:
@@ -1049,6 +1050,7 @@ class LoomTrackerApp:
 
                 if row["type"] == "entry":
                     val_str = f"{row['prod']:.1f} ({row['operator']})"
+                    comment = row["comment"] if row["comment"] else ""
                     if row["shift"] == "Day":
                         day_val = val_str
                     else:
@@ -1058,10 +1060,11 @@ class LoomTrackerApp:
 
                 tree.insert("", "end", values=(
                     row["date"],
-                    day_val,
                     night_val,
+                    day_val,
                     f"{row['stock']:.1f}",
-                    cut_val
+                    cut_val,
+                    comment
                 ), tags=(tag,))
 
             tree.tag_configure("even", background="#ffffff")

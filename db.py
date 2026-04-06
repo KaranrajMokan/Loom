@@ -349,7 +349,7 @@ def get_tracking_filtered(start_date=None, end_date=None, loom_id=None,
     conn = get_connection()
     query = """SELECT dt.*, l.loom_number, o.name as operator_name,
                       ds.style_code, ds.style_name, ds.price as style_price,
-                      (dt.length_produced * ds.price) as wages
+                      (dt.length_produced * ds.price) as wages, comment
                FROM daily_tracking dt
                JOIN looms l ON dt.loom_id = l.id
                JOIN operators o ON dt.operator_id = o.id
