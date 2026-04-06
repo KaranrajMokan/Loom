@@ -259,18 +259,18 @@ class LoomTrackerApp:
         years = [str(y) for y in range(today.year - 2, today.year + 2)]
         months = [f"{m:02d}" for m in range(1, 13)]
 
-        y_var = tk.StringVar(value=str(initial_date.year))
-        m_var = tk.StringVar(value=f"{initial_date.month:02d}")
         d_var = tk.StringVar(value=f"{initial_date.day:02d}")
+        m_var = tk.StringVar(value=f"{initial_date.month:02d}")
+        y_var = tk.StringVar(value=str(initial_date.year))
 
-        y_cb = ttk.Combobox(frame, textvariable=y_var, values=years, width=5, state="readonly", font=(FONT, 12))
-        y_cb.pack(side="left", padx=1)
+        d_cb = ttk.Combobox(frame, textvariable=d_var, values=[], width=3, state="readonly", font=(FONT, 12))
+        d_cb.pack(side="left", padx=1)
         tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 12)).pack(side="left")
         m_cb = ttk.Combobox(frame, textvariable=m_var, values=months, width=3, state="readonly", font=(FONT, 12))
         m_cb.pack(side="left", padx=1)
         tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 12)).pack(side="left")
-        d_cb = ttk.Combobox(frame, textvariable=d_var, values=[], width=3, state="readonly", font=(FONT, 12))
-        d_cb.pack(side="left", padx=1)
+        y_cb = ttk.Combobox(frame, textvariable=y_var, values=years, width=5, state="readonly", font=(FONT, 12))
+        y_cb.pack(side="left", padx=1)
 
         def _update_days(*_):
             try:
