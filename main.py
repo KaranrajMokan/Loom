@@ -1706,6 +1706,8 @@ class LoomTrackerApp:
         canvas, scroll_frame = self._make_scrollable(parent)
         looms = db.get_active_looms()
         loom_opts = ["All"] + [l["loom_number"] for l in looms]
+        styles = db.get_active_styles()
+        style_opts = ["All"] + [s["style_code"] for s in styles]
 
         card = self._make_card(scroll_frame)
         tk.Label(card, text="✂  Loom Cuts History", font=(FONT, 15, "bold"),
@@ -1720,6 +1722,10 @@ class LoomTrackerApp:
         cuts_loom_combo = ttk.Combobox(card, values=loom_opts, width=10, state="readonly", font=(FONT, 12))
         cuts_loom_combo.grid(row=2, column=1, padx=5, pady=8)
         cuts_loom_combo.set("All")
+        tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
+        cuts_style_combo = ttk.Combobox(card, values=style_opts, width=12, state="readonly", font=(FONT, 12))
+        cuts_style_combo.grid(row=2, column=3, padx=5, pady=8)
+        cuts_style_combo.set("All")
         btn_frame = tk.Frame(card, bg=CARD_BG)
         btn_frame.grid(row=3, column=0, columnspan=4, padx=15, pady=(5, 12), sticky="w")
 
@@ -1740,13 +1746,17 @@ class LoomTrackerApp:
                 for l in looms:
                     if l["loom_number"] == cuts_loom_combo.get():
                         sel_loom_id = l["id"]; break
-            rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_id)
+            sel_style_id = None
+            if cuts_style_combo.get() != "All":
+                for s in styles:
+                    if s["style_code"] == cuts_style_combo.get():
+                        sel_style_id = s["id"]; break
+            rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_id, sel_style_id)
             if not rows:
                 tk.Label(results_inner, text="No cuts found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 cuts_summary_var.set("0 cuts found")
                 return
-            cuts_summary_var.set(f"✂  {len(rows)} cuts found")
-            cols = ("Date", "Loom", "Operator", "Dhothi Cut (m)", "Loom Total (m)", "Remaining (m)", "Skipped?", "Comment", "Recorded At")
+            cols = ("Date", "Loom", "Operator", "Style", "Dhothi Cut (m)", "Skipped?", "Comment")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=12)
             scroll = ttk.Scrollbar(results_inner, orient="vertical", command=tree.yview)
             tree.configure(yscrollcommand=scroll.set)
@@ -1755,22 +1765,24 @@ class LoomTrackerApp:
                 tree.column(col, width=95, anchor="center")
             tree.column("Comment", width=180, anchor="w")
             tree.column("Operator", width=110)
+            total_cut_length = 0.0
             for idx, r in enumerate(rows):
                 tag = "even" if idx % 2 == 0 else "odd"
                 skipped = "Yes" if r["was_skipped"] else "No"
                 total_len = r["length_at_reset"]
                 remaining = r["remaining_length"] if r["remaining_length"] else 0.0
                 cut_len = round(total_len - remaining, 1) if not r["was_skipped"] else 0.0
+                total_cut_length += cut_len
                 tree.insert("", "end", values=(
-                    r["reset_date"], r["loom_number"], r["operator_name"],
+                    r["reset_date"], r["loom_number"], r["operator_name"], r["style_name"],
                     f"{cut_len:.1f}" if not r["was_skipped"] else "—",
-                    f"{total_len:.1f}", f"{remaining:.1f}",
-                    skipped, r["comment"], r["created_at"]
+                    skipped, r["comment"]
                 ), tags=(tag,))
             tree.tag_configure("even", background="#ffffff")
             tree.tag_configure("odd", background="#f8fafc")
             tree.pack(side="left", fill="both", expand=True)
             scroll.pack(side="right", fill="y")
+            cuts_summary_var.set(f"✂  {len(rows)} cuts found  |  Total: {total_cut_length:.1f}m ")
 
         self._make_button(btn_frame, "🔍 Search Cuts", search_cuts, color=PRIMARY, width=12).pack(side="left", padx=(0, 8))
         search_cuts()

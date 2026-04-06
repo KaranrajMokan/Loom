@@ -381,14 +381,22 @@ def get_tracking_filtered(start_date=None, end_date=None, loom_id=None,
 
 
 
-def get_loom_resets_filtered(start_date=None, end_date=None, loom_id=None):
-    """Get loom reset/cut history with optional filters, including operator name."""
+def get_loom_resets_filtered(start_date=None, end_date=None, loom_id=None, style_id=None):
+    """Get loom reset/cut history with optional filters, including operator name and dhothi style."""
     conn = get_connection()
     query = """SELECT lr.*, l.loom_number,
-                      COALESCE(o.name, '—') as operator_name
+                      COALESCE(o.name, '—') as operator_name,
+                      COALESCE(ds.style_code, '—') as style_code,
+                      COALESCE(ds.style_name, '—') as style_name
                FROM loom_resets lr
                JOIN looms l ON lr.loom_id = l.id
                LEFT JOIN operators o ON lr.operator_id = o.id
+               LEFT JOIN daily_tracking dt ON dt.id = (
+                   SELECT id FROM daily_tracking
+                   WHERE loom_id = lr.loom_id AND tracking_date <= lr.reset_date
+                   ORDER BY tracking_date DESC, id DESC LIMIT 1
+               )
+               LEFT JOIN dhothi_styles ds ON dt.style_id = ds.id
                WHERE 1=1"""
     params = []
     if start_date:
@@ -400,6 +408,9 @@ def get_loom_resets_filtered(start_date=None, end_date=None, loom_id=None):
     if loom_id:
         query += " AND lr.loom_id = ?"
         params.append(loom_id)
+    if style_id:
+        query += " AND ds.id = ?"
+        params.append(style_id)
     query += " ORDER BY lr.reset_date DESC, lr.created_at DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()
