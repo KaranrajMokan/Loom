@@ -145,6 +145,7 @@ class LoomTrackerApp:
         nav_items = [
             ("📊  Dashboard", self.show_dashboard),
             ("📝  Daily Entry", self.show_daily_entry),
+            ("✂️  Cutting", self.show_cutting),
             ("📓  Loom Ledger", self.show_loom_ledger),
             ("🏭  Looms", self.show_looms),
             ("👷  Operators", self.show_operators),
@@ -1023,6 +1024,169 @@ class LoomTrackerApp:
             msg += "\nGo to Dashboard to reset or skip."
             messagebox.showwarning("⚠️ Over Cut Limit", msg)
         self.show_daily_entry()
+
+    # ══════════════════════════════════════════════════
+    # CUTTING PAGE
+    # ══════════════════════════════════════════════════
+    def show_cutting(self):
+        self._clear_content()
+        self._set_active_nav("✂️  Cutting")
+        self._make_header("✂️ Custom Loom Cutting")
+
+        canvas, scroll_frame = self._make_scrollable(self.content)
+
+        looms = db.get_active_looms()
+        if not looms:
+            tk.Label(scroll_frame, text="⚠️ No active looms found.", font=(FONT, 13), bg=BG, fg=DANGER).pack(pady=30)
+            return
+
+        loom_opts = [l["loom_number"] for l in looms]
+
+        # Top Control Card
+        card = self._make_card(scroll_frame)
+        tk.Label(card, text="🏭 Select Loom to Cut:", font=(FONT, 11, "bold"), 
+                 bg=CARD_BG, fg=TEXT_DARK).pack(side="left", padx=(15, 5), pady=12)
+
+        loom_combo = ttk.Combobox(card, values=loom_opts, width=15, state="readonly", font=(FONT, 11))
+        loom_combo.pack(side="left", padx=5, pady=12)
+
+        # Container for the interactive cutting form
+        form_container = tk.Frame(scroll_frame, bg=BG)
+        form_container.pack(fill="both", expand=True, pady=10)
+
+        # Dynamically build the form when a loom is selected
+        def on_loom_selected(event=None):
+            # Clear previous form if switching looms
+            for w in form_container.winfo_children():
+                w.destroy()
+
+            sel_num = loom_combo.get()
+            if not sel_num: return
+
+            loom = next((l for l in looms if str(l["loom_number"]) == sel_num), None)
+            if not loom: return
+
+            total = loom["current_length"]
+            last = db.get_last_entry_for_loom(loom["id"])
+
+            # Total display card
+            total_frame = tk.Frame(form_container, bg=CARD_BG, highlightthickness=1, highlightbackground=DIVIDER)
+            total_frame.pack(fill="x", padx=30, pady=(0, 8))
+            tf_inner = tk.Frame(total_frame, bg=CARD_BG)
+            tf_inner.pack(fill="x", padx=14, pady=10)
+            tk.Label(tf_inner, text="📏 Total length in machine:", font=(FONT, 11), bg=CARD_BG, fg=TEXT_DARK).pack(side="left")
+            tk.Label(tf_inner, text=f"{total:.1f}m", font=(FONT, 14, "bold"), bg=CARD_BG, fg=DANGER).pack(side="right")
+
+            # Input section card
+            input_card = tk.Frame(form_container, bg=CARD_BG, highlightthickness=1, highlightbackground=ENTRY_FOCUS)
+            input_card.pack(fill="x", padx=30, pady=(0, 8))
+            tk.Label(input_card, text="🧵 Enter remaining length in loom after cut (m):",
+                     font=(FONT, 11, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=14, pady=(12, 4))
+            vcmd = (self.root.register(self._validate_numeric), "%P")
+            remaining_entry = tk.Entry(input_card, font=(FONT, 14), width=12, bd=0, relief="flat",
+                                       bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
+                                       validate="key", validatecommand=vcmd,
+                                       highlightthickness=1, highlightcolor=ENTRY_FOCUS, highlightbackground=ENTRY_BORDER)
+            remaining_entry.pack(anchor="w", padx=14, pady=(0, 12))
+
+            # Dynamic results container
+            results_container = tk.Frame(form_container, bg=BG)
+            results_container.pack(fill="x", padx=6)
+
+            # Comment field
+            comment_card = tk.Frame(form_container, bg=CARD_BG, highlightthickness=1, highlightbackground=DIVIDER)
+            comment_card.pack(fill="x", padx=30, pady=(0, 8))
+            tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 10, "bold"),
+                     bg=CARD_BG, fg=TEXT_LIGHT).pack(anchor="w", padx=14, pady=(10, 4))
+            custom_comment_entry = tk.Entry(comment_card, font=(FONT, 10), width=40, bd=0, relief="flat",
+                                            bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
+                                            highlightthickness=1, highlightcolor=ENTRY_FOCUS, highlightbackground=ENTRY_BORDER)
+            custom_comment_entry.pack(anchor="w", padx=14, pady=(0, 10))
+
+            # Validation + button area
+            validation_label = tk.Label(form_container, text="", font=(FONT, 10, "bold"), bg=BG, fg=DANGER)
+            validation_label.pack(padx=30, anchor="w", pady=(4, 0))
+
+            btn_frame = tk.Frame(form_container, bg=BG)
+            btn_frame.pack(fill="x", padx=30, pady=(6, 16))
+            confirm_btn = self._make_button(btn_frame, "✂  Confirm Cut", lambda: None, color=SUCCESS, width=20)
+            confirm_btn.pack(fill="x", ipady=6)
+            confirm_btn.config(state="disabled")
+
+            def update_calc(*_):
+                for w in results_container.winfo_children(): w.destroy()
+
+                raw = remaining_entry.get().strip()
+                if not raw:
+                    validation_label.config(text="⬆  Enter a value to see the calculation", fg=TEXT_LIGHT)
+                    confirm_btn.config(state="disabled")
+                    return
+                try:
+                    remaining = float(raw)
+                except ValueError:
+                    validation_label.config(text="❌ Invalid number", fg=DANGER)
+                    confirm_btn.config(state="disabled")
+                    return
+
+                cut_length = round(total - remaining, 1)
+
+                errors = []
+                if remaining < 0:
+                    errors.append("❌ Remaining length cannot be negative")
+                if remaining >= total:
+                    errors.append(f"❌ Remaining ({remaining:.1f}m) must be strictly less than total ({total:.1f}m)")
+                if errors:
+                    validation_label.config(text="\n".join(errors), fg=DANGER)
+                    confirm_btn.config(state="disabled")
+                    return
+
+                # Build summary blocks dynamically
+                self._build_cut_section(results_container, "CUT SUMMARY", CARD_BG, [
+                    ("📏 Total in machine", f"{total:.1f}m", TEXT_DARK),
+                    ("✂  Dhothi cut length", f"{cut_length:.1f}m", DANGER),
+                    ("🧵 Remaining in loom", f"{remaining:.1f}m", SUCCESS),
+                ])
+
+                if last:
+                    produced = last["length_produced"]
+                    loom_before = last["loom_length_before"]
+                    op_name = last["operator_name"]
+                    old_batch = round(cut_length - loom_before, 1)
+                    if old_batch < 0: old_batch = 0.0
+                    if old_batch > produced: old_batch = produced
+                    new_batch = round(produced - old_batch, 1)
+
+                    self._build_cut_section(results_container, f"👷 LAST OPERATOR: {op_name.upper()}", "#f0fdf4", [
+                        ("Total produced", f"{produced:.1f}m", TEXT_DARK),
+                        ("Loom before entry", f"{loom_before:.1f}m", TEXT_LIGHT),
+                        ("In old batch (cut)", f"{old_batch:.1f}m", WARNING_CLR),
+                        ("In new batch (stays)", f"{new_batch:.1f}m", PRIMARY),
+                    ])
+
+                validation_label.config(text=f"✅  {total:.1f} − {remaining:.1f} = {cut_length:.1f}m cut  •  Values correct", fg=SUCCESS)
+                confirm_btn.config(state="normal")
+
+            remaining_entry.bind("<KeyRelease>", update_calc)
+
+            def do_custom_cut():
+                remaining = float(remaining_entry.get().strip())
+                cut_length = round(total - remaining, 1)
+                cmt = custom_comment_entry.get().strip()
+                full_comment = f"Custom cut: {cut_length:.1f}m removed, {remaining:.1f}m left"
+                if cmt: full_comment += f" — {cmt}"
+
+                op_id = last["operator_id"] if last else None
+
+                db.reset_loom_length(loom["id"], total, was_skipped=False,
+                                     comment=full_comment, remaining_length=remaining, operator_id=op_id)
+
+                messagebox.showinfo("Success", f"✂️ Successfully cut {cut_length:.1f}m from Loom {loom['loom_number']}!")
+                self.show_cutting() # Reset the page to clear forms and refresh db data
+
+            confirm_btn.config(command=do_custom_cut)
+
+        # Trigger logic on loom selection
+        loom_combo.bind("<<ComboboxSelected>>", on_loom_selected)
 
     # ══════════════════════════════════════════════════
     # LOOM LEDGER (BOOK VIEW)
