@@ -416,7 +416,7 @@ class LoomTrackerApp:
             warn_hdr = tk.Frame(warn_card, bg="#fef2f2")
             warn_hdr.pack(fill="x")
             tk.Frame(warn_hdr, bg=DANGER, width=4).pack(side="left", fill="y")
-            tk.Label(warn_hdr, text="⚠️  Looms Over 80m — Action Required",
+            tk.Label(warn_hdr, text="⚠️  Looms Over Limit — Action Required",
                      font=(FONT, 15, "bold"), bg="#fef2f2", fg=DANGER).pack(anchor="w", padx=15, pady=12)
             for loom in warnings:
                 limit = loom['cut_limit']
@@ -1066,7 +1066,13 @@ class LoomTrackerApp:
             loom = next((l for l in looms if str(l["loom_number"]) == sel_num), None)
             if not loom: return
 
-            total = loom["current_length"]
+            # NOTE: Fetch fresh from DB so we get the most up-to-date total,
+            # especially if we just adjusted it in a previous step.
+            fresh_loom_data = next((l for l in db.get_active_looms() if l["id"] == loom["id"]), loom)
+
+            # NOTE: We store the total in a dictionary called `state`.
+            # This allows nested functions (like the adjustment popup) to modify this exact variable in real-time.
+            state = {"total": fresh_loom_data["current_length"]}
             last = db.get_last_entry_for_loom(loom["id"])
 
             # Total display card
@@ -1075,7 +1081,51 @@ class LoomTrackerApp:
             tf_inner = tk.Frame(total_frame, bg=CARD_BG)
             tf_inner.pack(fill="x", padx=14, pady=10)
             tk.Label(tf_inner, text="📏 Total length in machine:", font=(FONT, 11), bg=CARD_BG, fg=TEXT_DARK).pack(side="left")
-            tk.Label(tf_inner, text=f"{total:.1f}m", font=(FONT, 14, "bold"), bg=CARD_BG, fg=DANGER).pack(side="right")
+
+            # NOTE: We use tk.StringVar() here. When we change this variable later,
+            # Tkinter automatically instantly updates the Label on the screen.
+            total_str_var = tk.StringVar(value=f"{state['total']:.1f}m")
+            tk.Label(tf_inner, textvariable=total_str_var, font=(FONT, 14, "bold"), bg=CARD_BG, fg=DANGER).pack(side="left", padx=10)
+
+            # --- NEW ADJUSTMENT FEATURE ---
+            def open_adjust_popup():
+                adj_win = tk.Toplevel(self.root)
+                adj_win.title(f"Adjust Loom {loom['loom_number']}")
+                adj_win.geometry("350x220")
+                adj_win.configure(bg=CARD_BG)
+                adj_win.grab_set()
+
+                tk.Label(adj_win, text="✏️ Override Total Length", font=(FONT, 13, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(pady=(20, 5))
+                tk.Label(adj_win, text="Enter the new exact length (m):", font=(FONT, 10), bg=CARD_BG, fg=TEXT_LIGHT).pack()
+
+                vcmd_adj = (adj_win.register(self._validate_numeric), "%P")
+                adj_entry = tk.Entry(adj_win, font=(FONT, 16, "bold"), width=10, justify="center", bd=1, relief="solid",
+                                     bg=ENTRY_BG, fg=ENTRY_FG, validate="key", validatecommand=vcmd_adj)
+                adj_entry.pack(pady=15)
+                adj_entry.insert(0, str(state["total"]))
+
+                def save_adj():
+                    raw_val = adj_entry.get().strip()
+                    if not raw_val: return
+                    new_val = float(raw_val)
+
+                    # 1. Update the actual Database
+                    db.update_loom_length(loom["id"], new_val)
+
+                    # 2. Update the live `state` dictionary and the UI instantly
+                    state["total"] = new_val
+                    total_str_var.set(f"{state['total']:.1f}m")
+
+                    adj_win.destroy()
+                    messagebox.showinfo("Adjusted", f"Loom {loom['loom_number']} length manually updated to {new_val:.1f}m")
+
+                    # 3. Force the math calculation below to refresh if they already typed a remaining number
+                    update_calc()
+
+                self._make_button(adj_win, "💾 Save Adjustment", save_adj, color=WARNING_CLR).pack(ipady=4)
+
+            # Add the button to the right side of the total frame
+            self._make_button(tf_inner, "✏️ Adjust Length", open_adjust_popup, color=WARNING_CLR, width=14).pack(side="right")
 
             # Input section card
             input_card = tk.Frame(form_container, bg=CARD_BG, highlightthickness=1, highlightbackground=ENTRY_FOCUS)
@@ -1128,13 +1178,14 @@ class LoomTrackerApp:
                     confirm_btn.config(state="disabled")
                     return
 
-                cut_length = round(total - remaining, 1)
+                # NOTE: We use state["total"] here so the math always uses the adjusted live number!
+                cut_length = round(state["total"] - remaining, 1)
 
                 errors = []
                 if remaining < 0:
                     errors.append("❌ Remaining length cannot be negative")
-                if remaining >= total:
-                    errors.append(f"❌ Remaining ({remaining:.1f}m) must be strictly less than total ({total:.1f}m)")
+                if remaining >= state["total"]:
+                    errors.append(f"❌ Remaining ({remaining:.1f}m) must be strictly less than total ({state['total']:.1f}m)")
                 if errors:
                     validation_label.config(text="\n".join(errors), fg=DANGER)
                     confirm_btn.config(state="disabled")
@@ -1142,7 +1193,7 @@ class LoomTrackerApp:
 
                 # Build summary blocks dynamically
                 self._build_cut_section(results_container, "CUT SUMMARY", CARD_BG, [
-                    ("📏 Total in machine", f"{total:.1f}m", TEXT_DARK),
+                    ("📏 Total in machine", f"{state['total']:.1f}m", TEXT_DARK),
                     ("✂  Dhothi cut length", f"{cut_length:.1f}m", DANGER),
                     ("🧵 Remaining in loom", f"{remaining:.1f}m", SUCCESS),
                 ])
@@ -1163,21 +1214,23 @@ class LoomTrackerApp:
                         ("In new batch (stays)", f"{new_batch:.1f}m", PRIMARY),
                     ])
 
-                validation_label.config(text=f"✅  {total:.1f} − {remaining:.1f} = {cut_length:.1f}m cut  •  Values correct", fg=SUCCESS)
+                validation_label.config(text=f"✅  {state['total']:.1f} − {remaining:.1f} = {cut_length:.1f}m cut  •  Values correct", fg=SUCCESS)
                 confirm_btn.config(state="normal")
 
             remaining_entry.bind("<KeyRelease>", update_calc)
 
             def do_custom_cut():
                 remaining = float(remaining_entry.get().strip())
-                cut_length = round(total - remaining, 1)
+                # NOTE: Use state["total"] here as well
+                cut_length = round(state["total"] - remaining, 1)
                 cmt = custom_comment_entry.get().strip()
                 full_comment = f"Custom cut: {cut_length:.1f}m removed, {remaining:.1f}m left"
                 if cmt: full_comment += f" — {cmt}"
 
                 op_id = last["operator_id"] if last else None
 
-                db.reset_loom_length(loom["id"], total, was_skipped=False,
+                # NOTE: Save the new cut to DB using the live state total
+                db.reset_loom_length(loom["id"], state["total"], was_skipped=False,
                                      comment=full_comment, remaining_length=remaining, operator_id=op_id)
 
                 messagebox.showinfo("Success", f"✂️ Successfully cut {cut_length:.1f}m from Loom {loom['loom_number']}!")
