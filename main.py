@@ -451,7 +451,7 @@ class LoomTrackerApp:
             for idx, e in enumerate(today_entries):
                 tag = "even" if idx % 2 == 0 else "odd"
                 tree.insert("", "end", values=(e["shift"], e["loom_number"],
-                            e["operator_name"], e["style_code"],
+                            e["operator_name"], e["style_name"],
                             f"{e['length_produced']:.1f}", f"{e['loom_length_after']:.1f}"), tags=(tag,))
             tree.tag_configure("even", background="#ffffff")
             tree.tag_configure("odd", background="#f8fafc")
@@ -810,7 +810,7 @@ class LoomTrackerApp:
         tk.Label(shift_inner, text="📅 Date:", font=(FONT, 13, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=3, padx=(20, 5), pady=14)
         op_names = [o["name"] for o in operators]
-        style_codes = [f"{s['style_code']} - {s['style_name']}" for s in styles]
+        style_codes = [s['style_name'] for s in styles]
         self._entry_rows = []
 
         # Container for loom cards (rebuilt on shift change)
@@ -1044,6 +1044,10 @@ class LoomTrackerApp:
         loom_combo = ttk.Combobox(card, values=loom_opts, width=15, state="readonly", font=(FONT, 11))
         loom_combo.grid(row=0, column=1, padx=5, pady=12)
 
+        current_style_var = tk.StringVar(value="🎨 Current Style: —")
+        tk.Label(card, textvariable=current_style_var, font=(FONT, 11, "bold"),
+                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=2, padx=(30, 5), pady=12, sticky="w")
+
         # Container for the table
         results_inner = tk.Frame(scroll_frame, bg=BG)
         results_inner.pack(fill="both", expand=True, padx=30, pady=10)
@@ -1058,6 +1062,13 @@ class LoomTrackerApp:
             # Fetch all history for this loom (using wide date range)
             entries = db.get_tracking_filtered("2000-01-01", "2100-01-01", sel_loom_ids, None, None, None)
             cuts = db.get_loom_resets_filtered("2000-01-01", "2100-01-01", sel_loom_ids)
+
+            if entries:
+                # get_tracking_filtered sorts DESC by date, so index 0 is the most recent style
+                latest = entries[0]
+                current_style_var.set(f"🎨 Current Style: {latest['style_name']}")
+            else:
+                current_style_var.set("🎨 Current Style: No Data")
 
             timeline = []
             
@@ -1103,6 +1114,7 @@ class LoomTrackerApp:
             for idx, row in enumerate(timeline):
                 tag = "even" if idx % 2 == 0 else "odd"
                 day_val, night_val, cut_val = "", "", ""
+                comment = ""
 
                 if row["type"] == "entry":
                     val_str = f"{row['prod']:.1f} ({row['operator']})"
