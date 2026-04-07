@@ -34,7 +34,6 @@ ENTRY_FOCUS = "#3b82f6"
 DIVIDER = "#e2e8f0"
 FONT = "Helvetica Neue" if __import__("sys").platform == "darwin" else "Segoe UI"
 FONT_MONO = "SF Mono" if __import__("sys").platform == "darwin" else "Consolas"
-LOOM_LIMIT = 80.0
 IS_MAC = __import__("sys").platform == "darwin"
 
 
@@ -386,7 +385,7 @@ class LoomTrackerApp:
         operators = db.get_active_operators()
         styles = db.get_active_styles()
         today_entries = db.get_tracking_for_date(date.today().isoformat())
-        warnings = db.get_looms_over_limit(LOOM_LIMIT)
+        warnings = db.get_looms_over_limit()
 
         stats = [
             ("Active Looms", len(looms), PRIMARY, "🏭"),
@@ -419,11 +418,12 @@ class LoomTrackerApp:
             tk.Label(warn_hdr, text="⚠️  Looms Over 80m — Action Required",
                      font=(FONT, 15, "bold"), bg="#fef2f2", fg=DANGER).pack(anchor="w", padx=15, pady=12)
             for loom in warnings:
+                limit = loom['cut_limit']
                 row_f = tk.Frame(warn_card, bg="#fff7ed")
                 row_f.pack(fill="x", padx=15, pady=3)
-                tk.Label(row_f, text=f"  🏭 Loom {loom['loom_number']}  —  {loom['current_length']:.1f}m in machine",
+                tk.Label(row_f, text=f"  🏭 Loom {loom['loom_number']}  —  {loom['current_length']:.1f}m in machine (Limit: {int(limit)}m)",
                          font=(FONT, 13), bg="#fff7ed", fg=DANGER).pack(side="left", padx=5, pady=8)
-                self._make_button(row_f, "✂ Cut at 80m", lambda l=loom: self._cut_at_80(l),
+                self._make_button(row_f, f"✂ Cut at {int(limit)}m", lambda l=loom: self._cut_at_limit(l),
                                   color=SUCCESS, width=12).pack(side="right", padx=5, pady=4)
                 self._make_button(row_f, "✂ Custom Cut", lambda l=loom: self._custom_cut(l),
                                   color=PRIMARY, width=12).pack(side="right", padx=2, pady=4)
@@ -494,10 +494,10 @@ class LoomTrackerApp:
         new_batch = round(produced - old_batch, 1)
         return last, old_batch, new_batch
 
-    def _cut_at_80(self, loom):
-        """Cut at exactly 80m — remaining = current_length - 80."""
+    def _cut_at_limit(self, loom):
+        """Cut at dynamic limit (60m or 80m)."""
         total = loom["current_length"]
-        cut_length = 80.0
+        cut_length = loom["cut_limit"] if loom["cut_limit"] else 80.0  # Default to 80 if missing
         remaining = round(total - cut_length, 1)
         if remaining < 0:
             remaining = 0.0
@@ -505,17 +505,16 @@ class LoomTrackerApp:
         last = db.get_last_entry_for_loom(loom["id"])
 
         win = tk.Toplevel(self.root)
-        win.title("Cut at 80m")
+        win.title(f"Cut at {int(cut_length)}m")
         win.geometry("500x580")
         win.configure(bg=BG)
         win.grab_set()
 
-        # Header bar
         header = tk.Frame(win, bg=PRIMARY, height=56)
         header.pack(fill="x")
         header.pack_propagate(False)
-        tk.Label(header, text=f"✂  Cut at 80m — Loom {loom['loom_number']}",
-                 font=(FONT, 16, "bold"), bg=PRIMARY, fg="#ffffff").pack(side="left", padx=20, pady=12)
+        tk.Label(header, text=f"✂  Cut at {int(cut_length)}m — Loom {loom['loom_number']}",
+                 font=(FONT, 14, "bold"), bg=PRIMARY, fg="#ffffff").pack(side="left", padx=20, pady=12)
 
         body = tk.Frame(win, bg=BG)
         body.pack(fill="both", expand=True)
@@ -541,15 +540,11 @@ class LoomTrackerApp:
                 ("In new batch (stays)", f"{new_batch:.1f}m", PRIMARY),
             ])
 
-        # Comment field
         comment_card = tk.Frame(body, bg=CARD_BG, highlightthickness=1, highlightbackground=DIVIDER)
         comment_card.pack(fill="x", padx=24, pady=(0, 8))
-        tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 12, "bold"),
+        tk.Label(comment_card, text="💬 Comment (optional):", font=(FONT, 10, "bold"),
                  bg=CARD_BG, fg=TEXT_LIGHT).pack(anchor="w", padx=14, pady=(10, 4))
-        comment_entry = tk.Entry(comment_card, font=(FONT, 12), width=40, bd=0, relief="flat",
-                                 bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
-                                 highlightthickness=1, highlightcolor=ENTRY_FOCUS,
-                                 highlightbackground=ENTRY_BORDER)
+        comment_entry = tk.Entry(comment_card, font=(FONT, 10), width=40, bd=0, relief="flat", bg=ENTRY_BG, fg=ENTRY_FG)
         comment_entry.pack(anchor="w", padx=14, pady=(0, 10))
 
         # Confirm button
@@ -557,13 +552,13 @@ class LoomTrackerApp:
         btn_frame.pack(fill="x", padx=24, pady=(8, 16))
         def do_cut():
             cmt = comment_entry.get().strip()
-            full_comment = f"Cut at 80m" + (f" — {cmt}" if cmt else "")
+            full_comment = f"Cut at {int(cut_length)}m" + (f" — {cmt}" if cmt else "")
             op_id = last["operator_id"] if last else None
             db.reset_loom_length(loom["id"], total, was_skipped=False,
                                  comment=full_comment, remaining_length=remaining, operator_id=op_id)
             win.destroy()
             self.show_dashboard()
-        self._make_button(btn_frame, "✂  Confirm Cut at 80m", do_cut, color=SUCCESS).pack(fill="x", ipady=6)
+        self._make_button(btn_frame, f"✂  Confirm Cut at {int(cut_length)}m", do_cut, color=SUCCESS).pack(fill="x", ipady=6)
 
     def _custom_cut(self, loom):
         """Custom cut — operator enters how much dhothi is LEFT in the loom."""
@@ -839,7 +834,8 @@ class LoomTrackerApp:
                 existing = db.get_existing_entry(today, current_shift, loom["id"])
 
                 # Colored accent bar at top of card
-                is_over = loom["current_length"] >= LOOM_LIMIT
+                limit = loom["cut_limit"] if loom["cut_limit"] else 80.0
+                is_over = loom["current_length"] >= limit
                 accent_color = DANGER if is_over else (WARNING_CLR if existing else PRIMARY)
                 tk.Frame(card, bg=accent_color, height=3).pack(fill="x")
 
@@ -859,7 +855,7 @@ class LoomTrackerApp:
                 tk.Label(hdr, text=f"📏 In Machine: {loom['current_length']:.1f}m",
                          font=(FONT, 13, "bold"), bg=hdr_bg, fg=length_color).pack(side="right", padx=15, pady=10)
                 if is_over:
-                    tk.Label(hdr, text="⚠️ OVER 80m", font=(FONT, 12, "bold"),
+                    tk.Label(hdr, text=f"⚠️ OVER {int(limit)}m", font=(FONT, 10, "bold"),
                              bg=hdr_bg, fg=DANGER).pack(side="right", padx=5)
 
                 # Entry fields with clear labels
@@ -949,7 +945,7 @@ class LoomTrackerApp:
         st_map = {}
         for s in styles:
             key = f"{s['style_code']} - {s['style_name']}"
-            st_map[key] = s["id"]
+            st_map[key] = {"id": s["id"], "category": s["style_category"] or "D"}
         return op_map, st_map
 
     def _validate_and_save_row(self, row, shift, op_map, st_map, entry_date=None):
@@ -960,8 +956,7 @@ class LoomTrackerApp:
         op_name = row["op_combo"].get()
         st_key = row["st_combo"].get()
         if not op_name or not st_key:
-            messagebox.showwarning("Missing Data",
-                f"Loom {row['loom']['loom_number']}: Select operator and style.")
+            messagebox.showwarning("Missing Data", f"Loom {row['loom']['loom_number']}: Select operator and style.")
             return False, None
         try:
             length_produced = float(length_str)
@@ -975,11 +970,16 @@ class LoomTrackerApp:
         comment = row["comment_entry"].get().strip()
         the_date = entry_date or date.today().isoformat()
 
+        # Fetch the specific limit for the style they just selected
+        style_info = st_map[st_key]
+        style_id = style_info["id"]
+        cut_limit = 60.0 if style_info["category"] == "S" else 80.0
+
         db.add_tracking_entry(the_date, shift, loom["id"], op_map[op_name],
-                              st_map[st_key], length_produced, before, after, comment)
+                              style_id, length_produced, before, after, comment)
         warning = None
-        if after >= LOOM_LIMIT:
-            warning = (loom["loom_number"], after)
+        if after >= cut_limit:
+            warning = (loom["loom_number"], after, cut_limit) # Pass the limit into the warning
         return True, warning
 
     def _save_single_entry(self, row, shift):
@@ -993,8 +993,8 @@ class LoomTrackerApp:
         if result is False:
             return
         if warning:
-            messagebox.showwarning("⚠️ Over 80m",
-                f"Loom {warning[0]} is at {warning[1]:.1f}m (over 80m).\nGo to Dashboard to reset or skip.")
+            messagebox.showwarning("⚠️ Over Cut Limit",
+                f"Loom {warning[0]} is at {warning[1]:.1f}m (Limit is {int(warning[2])}m).\nGo to Dashboard to cut or skip.")
         self.show_daily_entry()
 
     def _save_daily_entries(self, shift):
@@ -1017,11 +1017,11 @@ class LoomTrackerApp:
             return
 
         if warnings_list:
-            msg = "⚠️ Looms over 80m:\n"
-            for num, length in warnings_list:
-                msg += f"  • Loom {num}: {length:.1f}m\n"
+            msg = "⚠️ Looms over their cut limit:\n"
+            for num, length, limit in warnings_list:
+                msg += f"  • Loom {num}: {length:.1f}m (Limit: {int(limit)}m)\n"
             msg += "\nGo to Dashboard to reset or skip."
-            messagebox.showwarning("⚠️ Over 80m", msg)
+            messagebox.showwarning("⚠️ Over Cut Limit", msg)
         self.show_daily_entry()
 
     # ══════════════════════════════════════════════════
@@ -1197,7 +1197,8 @@ class LoomTrackerApp:
         tree.column("Notes", width=160)
         all_looms = db.get_all_looms()
         for idx, loom in enumerate(all_looms):
-            if loom["current_length"] >= LOOM_LIMIT:
+            limit = loom["cut_limit"] if loom["cut_limit"] else 80.0
+            if loom["current_length"] >= limit:
                 tag = "warning"
             else:
                 tag = "even" if idx % 2 == 0 else "odd"
@@ -1915,8 +1916,8 @@ class LoomTrackerApp:
                 style_display = f"{r['style_code']} ({r['style_name']})" if r['style_code'] != '—' else '—'
                 total_remaining += r["current_length"]
 
-                # Highlight looms over the 80m limit in light red
-                if r["current_length"] >= LOOM_LIMIT:
+                limit = r["cut_limit"] if r["cut_limit"] else 80.0
+                if r["current_length"] >= limit:
                     tag = "warning"
 
                 tree.insert("", "end", values=(

@@ -114,14 +114,33 @@ def add_loom(loom_number, location="", notes=""):
 
 def get_all_looms():
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM looms ORDER BY loom_number").fetchall()
+    rows = conn.execute("""
+        SELECT l.*,
+               CASE WHEN COALESCE(ds.style_category, 'D') = 'S' THEN 60.0 ELSE 80.0 END as cut_limit
+        FROM looms l
+        LEFT JOIN daily_tracking dt ON dt.id = (
+            SELECT id FROM daily_tracking WHERE loom_id = l.id ORDER BY tracking_date DESC, id DESC LIMIT 1
+        )
+        LEFT JOIN dhothi_styles ds ON dt.style_id = ds.id
+        ORDER BY l.loom_number
+    """).fetchall()
     conn.close()
     return rows
 
 
 def get_active_looms():
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM looms WHERE status='Active' ORDER BY loom_number").fetchall()
+    rows = conn.execute("""
+        SELECT l.*,
+               COALESCE(ds.style_category, 'D') as current_style_category,
+               CASE WHEN COALESCE(ds.style_category, 'D') = 'S' THEN 60.0 ELSE 80.0 END as cut_limit
+        FROM looms l
+        LEFT JOIN daily_tracking dt ON dt.id = (
+            SELECT id FROM daily_tracking WHERE loom_id = l.id ORDER BY tracking_date DESC, id DESC LIMIT 1
+        )
+        LEFT JOIN dhothi_styles ds ON dt.style_id = ds.id
+        WHERE l.status='Active' ORDER BY l.loom_number
+    """).fetchall()
     conn.close()
     return rows
 
@@ -299,10 +318,21 @@ def get_tracking_range(start_date, end_date):
     return rows
 
 
-def get_looms_over_limit(limit=80.0):
+def get_looms_over_limit():
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM looms WHERE current_length >= ? AND status='Active' ORDER BY loom_number",
-                        (limit,)).fetchall()
+    rows = conn.execute("""
+        SELECT l.*,
+               COALESCE(ds.style_category, 'D') as current_style_category,
+               CASE WHEN COALESCE(ds.style_category, 'D') = 'S' THEN 60.0 ELSE 80.0 END as cut_limit
+        FROM looms l
+        LEFT JOIN daily_tracking dt ON dt.id = (
+            SELECT id FROM daily_tracking WHERE loom_id = l.id ORDER BY tracking_date DESC, id DESC LIMIT 1
+        )
+        LEFT JOIN dhothi_styles ds ON dt.style_id = ds.id
+        WHERE l.status='Active'
+          AND l.current_length >= CASE WHEN COALESCE(ds.style_category, 'D') = 'S' THEN 60.0 ELSE 80.0 END
+        ORDER BY l.loom_number
+    """).fetchall()
     conn.close()
     return rows
 
@@ -434,7 +464,8 @@ def get_remaining_looms_filtered(loom_ids=None, style_ids=None, locations=None):
     conn = get_connection()
     query = """SELECT l.loom_number, l.location, l.current_length,
                       COALESCE(ds.style_code, '—') as style_code,
-                      COALESCE(ds.style_name, '—') as style_name
+                      COALESCE(ds.style_name, '—') as style_name,
+                      CASE WHEN COALESCE(ds.style_category, 'D') = 'S' THEN 60.0 ELSE 80.0 END as cut_limit
                FROM looms l
                LEFT JOIN daily_tracking dt ON dt.id = (
                    SELECT id FROM daily_tracking
