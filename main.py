@@ -4,7 +4,7 @@ Built with Tkinter + SQLite. Runs fully offline.
 """
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-from datetime import date
+from datetime import date, datetime
 import calendar as cal_mod
 import csv
 import db
@@ -1753,7 +1753,7 @@ class LoomTrackerApp:
             total_wages = sum(r["wages"] for r in rows)
             summary_var.set(f"📊  {len(rows)} entries  |  Total: {total_produced:.1f}m  |  💰 ₹{total_wages:.2f}")
 
-            cols = ("Date", "Shift", "Loom", "Operator", "Style", "Produced (m)", "Rate (₹/m)", "Wages (₹)", "Comment")
+            cols = ("Date", "Day", "Shift", "Loom", "Operator", "Style", "Produced (m)", "Rate (₹/m)", "Wages (₹)", "Comment")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=15)
             scroll = ttk.Scrollbar(results_inner, orient="vertical", command=tree.yview)
             tree.configure(yscrollcommand=scroll.set)
@@ -1763,7 +1763,10 @@ class LoomTrackerApp:
             tree.column("Comment", width=120); tree.column("Operator", width=110)
             for idx, e in enumerate(rows):
                 tag = "even" if idx % 2 == 0 else "odd"
-                tree.insert("", "end", values=(e["tracking_date"], e["shift"], e["loom_number"],
+                date_obj = datetime.strptime(e["tracking_date"], "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d/%m/%y")
+                day_of_week = date_obj.strftime("%A")
+                tree.insert("", "end", values=(formatted_date, day_of_week, e["shift"], e["loom_number"],
                             e["operator_name"], e["style_code"], f"{e['length_produced']:.1f}",
                             f"₹{e['style_price']:.2f}", f"₹{e['wages']:.2f}", e["comment"]), tags=(tag,))
             tree.tag_configure("even", background="#ffffff")
@@ -2013,7 +2016,7 @@ class LoomTrackerApp:
                 tk.Label(results_inner, text="No cuts found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 cuts_summary_var.set("0 cuts found")
                 return
-            cols = ("Date", "Loom", "Operator", "Style", "Dhothi Cut (m)", "Comment")
+            cols = ("Date", "Day", "Shift", "Loom", "Operator", "Style", "Dhothi Cut (m)", "Comment")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=12)
             scroll = ttk.Scrollbar(results_inner, orient="vertical", command=tree.yview)
             tree.configure(yscrollcommand=scroll.set)
@@ -2029,8 +2032,11 @@ class LoomTrackerApp:
                 remaining = r["remaining_length"] if r["remaining_length"] else 0.0
                 cut_len = round(total_len - remaining, 1) if not r["was_skipped"] else 0.0
                 total_cut_length += cut_len
+                date_obj = datetime.strptime(r["reset_date"], "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d/%m/%y")
+                day_of_week = date_obj.strftime("%A")
                 tree.insert("", "end", values=(
-                    r["reset_date"], r["loom_number"], r["operator_name"], r["style_name"],
+                    formatted_date, day_of_week, r["shift"], r["loom_number"], r["operator_name"], r["style_name"],
                     f"{cut_len:.1f}" if not r["was_skipped"] else "—", r["comment"]
                 ), tags=(tag,))
             tree.tag_configure("even", background="#ffffff")

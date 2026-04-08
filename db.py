@@ -425,7 +425,8 @@ def get_loom_resets_filtered(start_date=None, end_date=None, loom_ids=None, styl
     query = """SELECT lr.*, l.loom_number,
                       COALESCE(o.name, '—') as operator_name,
                       COALESCE(ds.style_code, '—') as style_code,
-                      COALESCE(ds.style_name, '—') as style_name
+                      COALESCE(ds.style_name, '—') as style_name,
+                      dt.shift
                FROM loom_resets lr
                JOIN looms l ON lr.loom_id = l.id
                LEFT JOIN operators o ON lr.operator_id = o.id
