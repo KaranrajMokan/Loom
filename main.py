@@ -2000,7 +2000,7 @@ class LoomTrackerApp:
         op_combo = MultiSelectDropdown(card, choices=op_opts, width=12, font=(FONT, 10))
         op_combo.grid(row=2, column=3, padx=5, pady=8)
 
-        style_opts = [s["style_code"] for s in styles]
+        style_opts = [s["style_name"] for s in styles]
         tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=4, padx=(15, 5), pady=8, sticky="w")
         style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 10))
         style_combo.grid(row=2, column=5, padx=5, pady=8)
@@ -2027,7 +2027,7 @@ class LoomTrackerApp:
 
             sel_loom_ids = [l["id"] for l in looms if l["loom_number"] in sel_looms]
             sel_op_ids = [o["id"] for o in operators if o["name"] in sel_ops]
-            sel_style_ids = [s["id"] for s in styles if s["style_code"] in sel_styles]
+            sel_style_ids = [s["id"] for s in styles if s["style_name"] in sel_styles]
 
             rows = db.get_tracking_filtered(start_d, end_d, sel_loom_ids, sel_op_ids, sel_style_ids, sel_shifts)
             if not rows:
