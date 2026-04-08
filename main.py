@@ -147,6 +147,7 @@ class LoomTrackerApp:
         nav_items = [
             ("📊  Dashboard", self.show_dashboard),
             ("📝  Daily Entry", self.show_daily_entry),
+            ("🌴  Leaves", self.show_leaves),
             ("✂️  Cutting", self.show_cutting),
             ("📓  Loom Ledger", self.show_loom_ledger),
             ("🏭  Looms", self.show_looms),
@@ -997,6 +998,207 @@ class LoomTrackerApp:
             msg += "\nGo to Dashboard to reset."
             messagebox.showwarning("⚠️ Over Cut Limit", msg)
         self.show_daily_entry()
+
+
+    # ══════════════════════════════════════════════════
+    # LEAVES MANAGEMENT (CALENDAR & ENTRY)
+    # ══════════════════════════════════════════════════
+    def show_leaves(self):
+        self._clear_content()
+        self._set_active_nav("🌴  Leaves")
+        self._make_header("Operator Leave Management")
+
+        try:
+            from tkcalendar import Calendar
+        except ImportError:
+            tk.Label(self.content, text="Error: Missing library.\nPlease install tkcalendar: pip install tkcalendar", 
+                     font=(FONT, 12, "bold"), fg=DANGER, bg=BG).pack(pady=50)
+            return
+
+        canvas, scroll_frame = self._make_scrollable(self.content)
+        operators = db.get_active_operators()
+        op_map = {o["name"]: o["id"] for o in operators}
+        op_opts = list(op_map.keys())
+
+        # ── TOP SECTION: Add Leave Form ──
+        form_frame = tk.Frame(scroll_frame, bg=BG)
+        # Using anchor="w" ensures the form hugs the left side and doesn't stretch 100% wide
+        form_frame.pack(side="top", anchor="w", padx=15, pady=(10, 0))
+
+        # We manually build the card wrapper here to avoid the default fill="x" behavior
+        card_wrapper = tk.Frame(form_frame, bg=DIVIDER, bd=0)
+        card_wrapper.pack(anchor="w", padx=15, pady=8)
+        card = tk.Frame(card_wrapper, bg=CARD_BG, bd=0)
+        card.pack(fill="both", expand=True, padx=1, pady=1)
+
+        tk.Label(card, text="➕  Add New Leave Entry", font=(FONT, 13, "bold"),
+                 bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
+
+        grid_f = tk.Frame(card, bg=CARD_BG)
+        grid_f.pack(anchor="w", padx=15, pady=(0, 10))
+
+        # Row 0: Core Inputs
+        tk.Label(grid_f, text="📅 Date *", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, sticky="w", pady=6)
+        l_date_sel = self._make_date_selector(grid_f)
+        l_date_sel.grid(row=0, column=1, padx=(10, 20), pady=6, sticky="w")
+
+        tk.Label(grid_f, text="☀️ Shift *", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=2, sticky="w", pady=6)
+        l_shift_combo = ttk.Combobox(grid_f, values=["Day", "Night"], width=12, state="readonly", font=(FONT, 10))
+        l_shift_combo.grid(row=0, column=3, padx=(10, 20), pady=6, sticky="w")
+        l_shift_combo.set("Day")
+
+        tk.Label(grid_f, text="👷 Operator *", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=4, sticky="w", pady=6)
+        l_op_combo = ttk.Combobox(grid_f, values=op_opts, width=18, state="readonly", font=(FONT, 10))
+        l_op_combo.grid(row=0, column=5, padx=10, pady=6, sticky="w")
+
+        # Row 1: Optional Comment & Buttons
+        tk.Label(grid_f, text="💬 Comment:", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, sticky="w", pady=6)
+        e_comment = tk.Entry(grid_f, font=(FONT, 10), width=36, bd=0, relief="flat", bg=ENTRY_BG, fg=ENTRY_FG, 
+                             highlightthickness=1, highlightcolor=ENTRY_FOCUS, highlightbackground=ENTRY_BORDER)
+        e_comment.grid(row=1, column=1, columnspan=3, padx=(10, 20), pady=6, sticky="w")
+
+        def clear_form():
+            l_date_sel.set_date(date.today())
+            l_shift_combo.set("Day")
+            l_op_combo.set("")
+            e_comment.delete(0, "end")
+
+        def add_leave():
+            the_date = l_date_sel.get_date().isoformat()
+            shift = l_shift_combo.get()
+            op_name = l_op_combo.get()
+
+            if not op_name:
+                messagebox.showwarning("Missing Info", "Please select an operator.")
+                return
+
+            if db.add_operator_leave(the_date, shift, op_map[op_name], e_comment.get().strip()):
+                messagebox.showinfo("Success", f"Leave added for {op_name} on {the_date}.")
+                clear_form()
+                self.show_leaves()
+            else:
+                messagebox.showerror("Error", f"A leave entry already exists for {op_name}\non {the_date} ({shift} shift).")
+
+        btn_frame = tk.Frame(grid_f, bg=CARD_BG)
+        btn_frame.grid(row=1, column=4, columnspan=2, pady=6, sticky="e")
+        self._make_button(btn_frame, "➕ Add Leave", add_leave, color=SUCCESS).pack(side="left", padx=5)
+        self._make_button(btn_frame, "🗑 Clear", clear_form, color=WARNING_CLR, width=8).pack(side="left")
+
+
+        # ── BOTTOM SECTION: Split Layout ──
+        bottom_frame = tk.Frame(scroll_frame, bg=BG)
+        # Using pady=(70, 20) pushes the calendar and summary further down the screen, away from the form
+        bottom_frame.pack(side="top", fill="both", expand=True, padx=15, pady=(70, 20))
+
+        # Bottom Left: Calendar
+        cal_frame = tk.Frame(bottom_frame, bg=BG)
+        cal_frame.pack(side="left", fill="both", expand=True, padx=(15, 10))
+
+        # Bottom Right: Visible Leaves Summary
+        list_frame = tk.Frame(bottom_frame, bg=BG)
+        list_frame.pack(side="right", fill="both", expand=True, padx=(10, 15))
+
+        # ── BOTTOM LEFT: Calendar Card ──
+        cal_card = self._make_card(cal_frame)
+
+        tk.Label(cal_card, text="📅 Leave Calendar", font=(FONT, 12, "bold"),
+                 bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=10)
+
+        today = date.today()
+        cal = Calendar(cal_card, selectmode='day',
+                       year=today.year, month=today.month, day=today.day,
+                       background=PRIMARY, foreground='white',
+                       headersbackground='#e2e8f0', headersforeground=TEXT_DARK,
+                       selectbackground=PRIMARY, selectforeground='white',
+                       normalbackground=ENTRY_BG, normalforeground=TEXT_DARK,
+                       weekendbackground=ENTRY_BG, weekendforeground=TEXT_DARK,
+                       othermonthbackground='#f1f5f9', othermonthforeground='#a0aec0',
+                       font=(FONT, 10), borderwidth=0)
+        cal.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+
+        def mark_leave_dates(event=None):
+            cal.alevent_dates = {} # Clear existing marks
+            c_year, c_month = cal.get_displayed_month()
+            leave_dates_str = db.get_leave_dates_for_month(c_year, c_month)
+
+            for d_str in leave_dates_str:
+                d_obj = date.fromisoformat(d_str)
+                cal.calevent_create(d_obj, '🌴 On Leave', 'leave_marker')
+
+            # Tag configuration for the marker
+            cal.tag_config('leave_marker', background=DIVIDER, foreground='white')
+
+        cal.bind("<<CalendarMonthChanged>>", mark_leave_dates)
+        mark_leave_dates()
+
+        legend_frame = tk.Frame(cal_card, bg=CARD_BG)
+        legend_frame.pack(fill="x", padx=15, pady=(0, 15))
+
+
+        # ── BOTTOM RIGHT: List of People on Leave ──
+        summary_card = self._make_card(list_frame)
+
+        sel_hdr_var = tk.StringVar(value=f"Showing Leaves for: {date.today().strftime('%d %B %Y')}")
+        tk.Label(summary_card, textvariable=sel_hdr_var, font=(FONT, 12, "bold"),
+                 bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(10, 5))
+
+        tk.Frame(summary_card, bg=DIVIDER, height=1).pack(fill="x", padx=15, pady=(0, 10))
+
+        list_container = tk.Frame(summary_card, bg=CARD_BG)
+        list_container.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+
+        def update_leave_list(event=None):
+            for w in list_container.winfo_children():
+                w.destroy()
+
+            try:
+                sel_date_obj = cal.selection_get()
+                sel_date_str = sel_date_obj.isoformat()
+            except Exception:
+                return
+
+            sel_hdr_var.set(f"Showing Leaves for: {sel_date_obj.strftime('%d %B %Y')}")
+
+            leaves = db.get_leaves_for_date(sel_date_str)
+
+            if not leaves:
+                tk.Label(list_container, text="🎉 No operators scheduled on leave.", 
+                         font=(FONT, 11), bg=CARD_BG, fg=SUCCESS).pack(pady=20)
+                return
+
+            for idx, l in enumerate(leaves):
+                row_bg = CARD_BG if idx % 2 == 0 else "#f8fafc"
+
+                l_card = tk.Frame(list_container, bg=row_bg, highlightthickness=1, highlightbackground=DIVIDER)
+                l_card.pack(fill="x", pady=4)
+
+                tk.Frame(l_card, bg=WARNING_CLR, width=4).pack(side="left", fill="y")
+
+                inner_f = tk.Frame(l_card, bg=row_bg)
+                inner_f.pack(fill="x", padx=12, pady=10)
+
+                f_details = tk.Frame(inner_f, bg=row_bg)
+                f_details.pack(side="left")
+
+                tk.Label(f_details, text=l['operator_name'], font=(FONT, 11, "bold"), 
+                         bg=row_bg, fg=TEXT_DARK).pack(anchor="w")
+
+                details_text = f"Shift: {l['shift']}"
+                if l['comment']: details_text += f"  |  💬 {l['comment']}"
+
+                tk.Label(f_details, text=details_text, font=(FONT, 9), 
+                         bg=row_bg, fg=TEXT_LIGHT).pack(anchor="w", pady=(2,0))
+
+                def delete_l(lid=l['id'], op_n=l['operator_name']):
+                    if messagebox.askyesno("Confirm Delete", f"Remove leave entry for {op_n}?"):
+                        db.delete_leave_entry(lid)
+                        self.show_leaves() 
+
+                self._make_button(inner_f, "❌", delete_l, color=DANGER, width=2).pack(side="right")
+
+        cal.bind("<<CalendarSelected>>", update_leave_list)
+        update_leave_list()
+
 
     # ══════════════════════════════════════════════════
     # CUTTING PAGE

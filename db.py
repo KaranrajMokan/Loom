@@ -87,6 +87,16 @@ def init_db():
             created_at TEXT DEFAULT (datetime('now','localtime')),
             FOREIGN KEY (loom_id) REFERENCES looms(id)
         );
+        CREATE TABLE IF NOT EXISTS operator_leaves (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            leave_date TEXT NOT NULL,
+            shift TEXT NOT NULL CHECK(shift IN ('Day','Night')),
+            operator_id INTEGER NOT NULL,
+            comment TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now','localtime')),
+            UNIQUE(leave_date, shift, operator_id), -- Prevent duplicate entries
+            FOREIGN KEY (operator_id) REFERENCES operators(id)
+        );
     """)
     conn.commit()
 
@@ -528,6 +538,54 @@ def has_data():
     count = conn.execute("SELECT COUNT(*) FROM looms").fetchone()[0]
     conn.close()
     return count > 0
+
+
+# ------------------------------------------------------------------
+# ── Operator Leaves ──
+# ------------------------------------------------------------------
+def add_operator_leave(leave_date, shift, operator_id, comment=""):
+    """Adds a new leave record. Returns True on success, False on duplicate."""
+    conn = get_connection()
+    try:
+        conn.execute("""INSERT INTO operator_leaves (leave_date, shift, operator_id, comment)
+                        VALUES (?,?,?,?)""", (leave_date, shift, operator_id, comment))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False # Duplicate entry
+    finally:
+        conn.close()
+
+
+def get_leaves_for_date(the_date):
+    """Returns all operators on leave for a specific date (joined with names)."""
+    conn = get_connection()
+    rows = conn.execute("""SELECT ol.*, o.name as operator_name
+                           FROM operator_leaves ol
+                           JOIN operators o ON ol.operator_id = o.id
+                           WHERE ol.leave_date = ?
+                           ORDER BY ol.shift, o.name""", (the_date,)).fetchall()
+    conn.close()
+    return rows
+
+
+def get_leave_dates_for_month(year, month):
+    """Returns a distinct set of dates that have leave records in a given month."""
+    conn = get_connection()
+    # Format pattern for SQLite like '2026-04-%'
+    pattern = f"{year}-{month:02d}-%"
+    rows = conn.execute("""SELECT DISTINCT leave_date FROM operator_leaves
+                           WHERE leave_date LIKE ?""", (pattern,)).fetchall()
+    conn.close()
+    return [r['leave_date'] for r in rows]
+
+
+def delete_leave_entry(leave_id):
+    """Removes a specific leave entry."""
+    conn = get_connection()
+    conn.execute("DELETE FROM operator_leaves WHERE id=?", (leave_id,))
+    conn.commit()
+    conn.close()
 
 
 def insert_sample_data():
