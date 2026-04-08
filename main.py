@@ -428,8 +428,6 @@ class LoomTrackerApp:
                                   color=SUCCESS, width=12).pack(side="right", padx=5, pady=4)
                 self._make_button(row_f, "✂ Custom Cut", lambda l=loom: self._custom_cut(l),
                                   color=PRIMARY, width=12).pack(side="right", padx=2, pady=4)
-                self._make_button(row_f, "⏭ Skip", lambda l=loom: self._skip_reset(l),
-                                  color=WARNING_CLR, width=8).pack(side="right", padx=2, pady=4)
         else:
             ok_card = self._make_card(self.content)
             ok_inner = tk.Frame(ok_card, bg="#f0fdf4")
@@ -708,33 +706,6 @@ class LoomTrackerApp:
 
         confirm_btn.config(command=do_custom_cut)
 
-    def _skip_reset(self, loom):
-        win = tk.Toplevel(self.root)
-        win.title("Skip Reset")
-        win.geometry("400x200")
-        win.configure(bg=CARD_BG)
-        win.grab_set()
-        tk.Label(win, text=f"Skip reset for Loom {loom['loom_number']}?",
-                 font=(FONT, 15, "bold"), bg=CARD_BG, fg=TEXT_DARK).pack(pady=(20, 5))
-        tk.Label(win, text=f"Current length: {loom['current_length']:.1f}m",
-                 font=(FONT, 13), bg=CARD_BG, fg=DANGER).pack()
-        tk.Label(win, text="Comment (optional):", font=(FONT, 12),
-                 bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=20, pady=(10, 2))
-        comment_entry = tk.Entry(win, font=(FONT, 12), width=40, bd=0, relief="flat",
-                                 bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
-                                 highlightthickness=1, highlightcolor=ENTRY_FOCUS,
-                                 highlightbackground=ENTRY_BORDER)
-        comment_entry.pack(padx=20)
-
-        def do_skip():
-            last = db.get_last_entry_for_loom(loom["id"])
-            op_id = last["operator_id"] if last else None
-            db.reset_loom_length(loom["id"], loom["current_length"],
-                                was_skipped=True, comment=comment_entry.get(), operator_id=op_id)
-            win.destroy()
-            self.show_dashboard()
-        self._make_button(win, "Confirm Skip", do_skip, color=WARNING_CLR).pack(pady=15)
-
     # ══════════════════════════════════════════════════
     # DAILY ENTRY
     # ══════════════════════════════════════════════════
@@ -995,7 +966,7 @@ class LoomTrackerApp:
             return
         if warning:
             messagebox.showwarning("⚠️ Over Cut Limit",
-                f"Loom {warning[0]} is at {warning[1]:.1f}m (Limit is {int(warning[2])}m).\nGo to Dashboard to cut or skip.")
+                f"Loom {warning[0]} is at {warning[1]:.1f}m (Limit is {int(warning[2])}m).\nGo to Dashboard to cut")
         self.show_daily_entry()
 
     def _save_daily_entries(self, shift):
@@ -1021,7 +992,7 @@ class LoomTrackerApp:
             msg = "⚠️ Looms over their cut limit:\n"
             for num, length, limit in warnings_list:
                 msg += f"  • Loom {num}: {length:.1f}m (Limit: {int(limit)}m)\n"
-            msg += "\nGo to Dashboard to reset or skip."
+            msg += "\nGo to Dashboard to reset."
             messagebox.showwarning("⚠️ Over Cut Limit", msg)
         self.show_daily_entry()
 
@@ -2042,7 +2013,7 @@ class LoomTrackerApp:
                 tk.Label(results_inner, text="No cuts found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 cuts_summary_var.set("0 cuts found")
                 return
-            cols = ("Date", "Loom", "Operator", "Style", "Dhothi Cut (m)", "Skipped?", "Comment")
+            cols = ("Date", "Loom", "Operator", "Style", "Dhothi Cut (m)", "Comment")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=12)
             scroll = ttk.Scrollbar(results_inner, orient="vertical", command=tree.yview)
             tree.configure(yscrollcommand=scroll.set)
@@ -2054,15 +2025,13 @@ class LoomTrackerApp:
             total_cut_length = 0.0
             for idx, r in enumerate(rows):
                 tag = "even" if idx % 2 == 0 else "odd"
-                skipped = "Yes" if r["was_skipped"] else "No"
                 total_len = r["length_at_reset"]
                 remaining = r["remaining_length"] if r["remaining_length"] else 0.0
                 cut_len = round(total_len - remaining, 1) if not r["was_skipped"] else 0.0
                 total_cut_length += cut_len
                 tree.insert("", "end", values=(
                     r["reset_date"], r["loom_number"], r["operator_name"], r["style_name"],
-                    f"{cut_len:.1f}" if not r["was_skipped"] else "—",
-                    skipped, r["comment"]
+                    f"{cut_len:.1f}" if not r["was_skipped"] else "—", r["comment"]
                 ), tags=(tag,))
             tree.tag_configure("even", background="#ffffff")
             tree.tag_configure("odd", background="#f8fafc")
