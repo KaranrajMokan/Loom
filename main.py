@@ -945,7 +945,7 @@ class LoomTrackerApp:
         op_map = {o["name"]: o["id"] for o in operators}
         st_map = {}
         for s in styles:
-            key = f"{s['style_code']} - {s['style_name']}"
+            key = s['style_name']
             st_map[key] = {"id": s["id"], "category": s["style_category"] or "D"}
         return op_map, st_map
 
