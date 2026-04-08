@@ -7,6 +7,8 @@ from tkinter import ttk, messagebox, filedialog
 from datetime import date, datetime
 import calendar as cal_mod
 import csv
+
+from fpdf import XPos, YPos
 import db
 import sys
 import os
@@ -1236,6 +1238,25 @@ class LoomTrackerApp:
         tk.Label(card, textvariable=current_style_var, font=(FONT, 11, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=2, padx=(30, 5), pady=12, sticky="w")
 
+        btn_frame = tk.Frame(card, bg=CARD_BG)
+        btn_frame.grid(row=0, column=3, padx=(20, 15), pady=12, sticky="w")
+
+        def export_loom_ledger_pdf():
+            if not hasattr(self, '_ledger_rows') or not self._ledger_rows:
+                messagebox.showinfo("No Data", "Select a loom to generate the ledger first.")
+                return
+
+            loom_num = loom_combo.get()
+            headers = ["Date", "Night Shift", "Day Shift", "Current Stock", "Cut Off", "Comment"]
+            widths = [25, 45, 45, 30, 25, 100]  # Total width ~270 for Landscape A4
+
+            title = f"Loom Ledger - Loom {loom_num}"
+            filename = f"loom_{loom_num}_ledger"
+
+            self._export_generic_pdf(title, headers, widths, self._ledger_rows, filename)
+
+        self._make_button(btn_frame, "📄 Export PDF", export_loom_ledger_pdf, color="#e11d48", width=12).pack()
+
         # Container for the table
         results_inner = tk.Frame(scroll_frame, bg=BG)
         results_inner.pack(fill="both", expand=True, padx=30, pady=10)
@@ -1299,6 +1320,7 @@ class LoomTrackerApp:
                 tree.heading(col, text=col)
                 tree.column(col, width=130, anchor="center")
 
+            self._ledger_rows = []
             for idx, row in enumerate(timeline):
                 tag = "even" if idx % 2 == 0 else "odd"
                 day_val, night_val, cut_val = "", "", ""
@@ -1314,14 +1336,16 @@ class LoomTrackerApp:
                 elif row["type"] == "cut":
                     cut_val = f"{row['cut_val']:.1f}"
 
-                tree.insert("", "end", values=(
+                row_values = (
                     row["date"],
                     night_val,
                     day_val,
                     f"{row['stock']:.1f}",
                     cut_val,
                     comment
-                ), tags=(tag,))
+                )
+                tree.insert("", "end", values=row_values, tags=(tag,))
+                self._ledger_rows.append(list(row_values))
 
             tree.tag_configure("even", background="#ffffff")
             tree.tag_configure("odd", background="#f8fafc")
@@ -1626,6 +1650,66 @@ class LoomTrackerApp:
 
 
     # ══════════════════════════════════════════════════
+    # PDF EXPORT HELPER
+    # ══════════════════════════════════════════════════    
+    def _export_generic_pdf(self, title, headers, widths, data_rows, filename_prefix):
+        """A reusable function to generate PDF tables from any data."""
+        if not data_rows:
+            messagebox.showinfo("No Data", "No data to export. Please search first.")
+            return
+        
+        path = filedialog.asksaveasfilename(defaultextension=".pdf",
+            filetypes=[("PDF files", "*.pdf")],
+            initialfile=f"{filename_prefix}_{date.today().strftime('%d/%m/%Y')}.pdf")
+        
+        if not path:
+            return
+        
+        try:
+            from fpdf import FPDF
+        except ImportError:
+            messagebox.showerror("Dependency Missing", "Please install fpdf2 using: pip install fpdf2")
+            return
+
+        pdf = FPDF(orientation='L', unit='mm', format='A4')
+        pdf.add_page()
+        
+        # Load custom font (using try/except in case the file is missing)
+        try:
+            pdf.add_font("DejaVu", "B", resource_path("DejaVuSans-Bold.ttf"))
+            custom_font = True
+        except Exception:
+            custom_font = False
+
+        # Report Title
+        pdf.set_font("Helvetica", "B", 16)
+        pdf.cell(0, 10, f"{title} - {date.today().strftime('%d/%m/%Y')}", new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+        pdf.ln(5)
+        
+        # Table Headers
+        if custom_font:
+            pdf.set_font("DejaVu", "B", 10)
+        else:
+            pdf.set_font("Helvetica", "B", 10)
+
+        for i in range(len(headers)):
+            pdf.cell(widths[i], 10, headers[i], border=1, align='C')
+        pdf.ln()
+
+        # Table Content
+        # We keep the font as DejaVu here so the ₹ symbol doesn't crash the PDF
+        for row in data_rows:
+            for i, item in enumerate(row):
+                pdf.cell(widths[i], 10, str(item), border=1)
+            pdf.ln()
+
+        try:
+            pdf.output(path)
+            messagebox.showinfo("Exported", f"PDF report saved to:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save PDF:\n{e}")
+
+    # ══════════════════════════════════════════════════
     # REPORTS
     # ══════════════════════════════════════════════════
     def show_reports(self):
@@ -1802,51 +1886,19 @@ class LoomTrackerApp:
                 messagebox.showinfo("No Data", "Search first, then export.")
                 return
             
-            path = filedialog.asksaveasfilename(defaultextension=".pdf",
-                filetypes=[("PDF files", "*.pdf")],
-                initialfile=f"loom_report_{date.today().isoformat()}.pdf")
-            if not path:
-                return
-            
-            try:
-                from fpdf import FPDF
-            except ImportError:
-                messagebox.showerror("Dependency Missing", "Please install fpdf2 using: pip install fpdf2")
-                return
-
-            # Initialize PDF (Landscape for more columns)
-
-            pdf = FPDF(orientation='L', unit='mm', format='A4')
-            pdf.add_page()
-            pdf.add_font("DejaVu", "B", resource_path("DejaVuSans-Bold.ttf"), uni=True)
-            pdf.set_font("Helvetica", "B", 16)
-            pdf.cell(0, 10, f"Loom Production Report - {date.today().isoformat()}", ln=True, align='C')
-            pdf.ln(10)
-            
-            # Table Headers
-            pdf.set_font("DejaVu", "B", 10)
             headers = ["Date", "Shift", "Loom", "Operator", "Style", "Meters", "Rate (₹)", "Wages (₹)"]
             widths = [30, 20, 20, 45, 35, 25, 25, 30]
             
-            for i in range(len(headers)):
-                pdf.cell(widths[i], 10, headers[i], border=1, align='C')
-            pdf.ln()
-            
-            # Table Content
-            pdf.set_font("Helvetica", "", 10)
+            # Format the data into a simple list of lists
+            data_rows = []
             for e in self._report_rows:
-                pdf.cell(widths[0], 10, str(e["tracking_date"]), border=1)
-                pdf.cell(widths[1], 10, str(e["shift"]), border=1)
-                pdf.cell(widths[2], 10, str(e["loom_number"]), border=1)
-                pdf.cell(widths[3], 10, str(e["operator_name"]), border=1)
-                pdf.cell(widths[4], 10, str(e["style_code"]), border=1)
-                pdf.cell(widths[5], 10, f"{e['length_produced']:.1f}", border=1)
-                pdf.cell(widths[6], 10, f"{e['style_price']:.2f}", border=1)
-                pdf.cell(widths[7], 10, f"{e['wages']:.2f}", border=1)
-                pdf.ln()
+                data_rows.append([
+                    e["tracking_date"], e["shift"], e["loom_number"],
+                    e["operator_name"], e["style_code"], f"{e['length_produced']:.1f}",
+                    f"₹{e['style_price']:.2f}", f"₹{e['wages']:.2f}"
+                ])
                 
-            pdf.output(path)
-            messagebox.showinfo("Exported", f"PDF report saved to:\n{path}")
+            self._export_generic_pdf("Loom Production Report", headers, widths, data_rows, "production_report")
 
         self._make_button(btn_frame, "📥 Export CSV", export_csv, color=SUCCESS, width=12).pack(side="left", padx=5)
         self._make_button(btn_frame, "📄 Export PDF", export_pdf, color="#e11d48", width=12).pack(side="left", padx=5)
@@ -2044,8 +2096,33 @@ class LoomTrackerApp:
             tree.pack(side="left", fill="both", expand=True)
             scroll.pack(side="right", fill="y")
             cuts_summary_var.set(f"✂  {len(rows)} cuts found  |  Total: {total_cut_length:.1f}m ")
+            self._cuts_rows = rows
+
+        def export_cuts_pdf():
+            if not hasattr(self, '_cuts_rows') or not self._cuts_rows:
+                messagebox.showinfo("No Data", "Search first, then export.")
+                return
+
+            headers = ["Date", "Loom", "Operator", "Style", "Cut (m)", "Skipped", "Comment"]
+            widths = [30, 20, 40, 40, 25, 20, 90] # Total width should be <= ~270 for Landscape A4
+
+            data_rows = []
+            for r in self._cuts_rows:
+                skipped = "Yes" if r["was_skipped"] else "No"
+                total_len = r["length_at_reset"]
+                remaining = r["remaining_length"] if r["remaining_length"] else 0.0
+                cut_len = round(total_len - remaining, 1) if not r["was_skipped"] else 0.0
+
+                data_rows.append([
+                    r["reset_date"], r["loom_number"], r["operator_name"], r["style_name"],
+                    f"{cut_len:.1f}" if not r["was_skipped"] else "—",
+                    skipped, r["comment"]
+                ])
+
+            self._export_generic_pdf("Loom Cuts History", headers, widths, data_rows, "loom_cuts")
 
         self._make_button(btn_frame, "🔍 Search Cuts", search_cuts, color=PRIMARY, width=12).pack(side="left", padx=(0, 8))
+        self._make_button(btn_frame, "📄 Export PDF", export_cuts_pdf, color="#e11d48", width=12).pack(side="left", padx=5)
         search_cuts()
 
     # ── Remaining Loom Report ──
