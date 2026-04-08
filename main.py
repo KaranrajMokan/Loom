@@ -248,7 +248,7 @@ class LoomTrackerApp:
         tk.Label(hdr, text=title, font=(FONT, 22, "bold"), bg=BG, fg=TEXT_DARK).pack(side="left")
         date_frame = tk.Frame(hdr, bg="#e2e8f0", padx=12, pady=5)
         date_frame.pack(side="right")
-        tk.Label(date_frame, text=f"📅  {date.today().strftime('%A, %d %B %Y')}",
+        tk.Label(date_frame, text=f" {date.today().strftime('%A, %d %B %Y')}",
                  font=(FONT, 12), bg="#e2e8f0", fg=TEXT_LIGHT).pack()
         return hdr
 
@@ -310,67 +310,104 @@ class LoomTrackerApp:
         return combo
 
     def _make_date_selector(self, parent, initial_date=None, on_change=None):
-        """Create a Year/Month/Day combobox date selector. Returns a dict with get_date() and set_date() methods."""
+        """Create a custom, freeze-proof calendar selector."""
         if initial_date is None:
             initial_date = date.today()
+
+        # Container frame
         frame = tk.Frame(parent, bg=CARD_BG)
-        today = date.today()
-        years = [str(y) for y in range(today.year - 2, today.year + 2)]
-        months = [f"{m:02d}" for m in range(1, 13)]
+        frame.current_date = initial_date  # Store the actual date object
 
-        d_var = tk.StringVar(value=f"{initial_date.day:02d}")
-        m_var = tk.StringVar(value=f"{initial_date.month:02d}")
-        y_var = tk.StringVar(value=str(initial_date.year))
+        # String variable for the UI
+        date_str_var = tk.StringVar(value=initial_date.strftime("%d-%m-%Y"))
 
-        d_cb = ttk.Combobox(frame, textvariable=d_var, values=[], width=3, state="readonly", font=(FONT, 12))
-        d_cb.pack(side="left", padx=1)
-        tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 12)).pack(side="left")
-        m_cb = ttk.Combobox(frame, textvariable=m_var, values=months, width=3, state="readonly", font=(FONT, 12))
-        m_cb.pack(side="left", padx=1)
-        tk.Label(frame, text="-", bg=CARD_BG, fg=TEXT_DARK, font=(FONT, 12)).pack(side="left")
-        y_cb = ttk.Combobox(frame, textvariable=y_var, values=years, width=5, state="readonly", font=(FONT, 12))
-        y_cb.pack(side="left", padx=1)
+        # Read-only entry to display the date beautifully
+        entry = tk.Entry(frame, textvariable=date_str_var, width=12, justify="center",
+                         font=(FONT, 11), state="readonly", 
+                         readonlybackground=ENTRY_BG, fg=TEXT_DARK,
+                         highlightthickness=1, highlightbackground=ENTRY_BORDER)
+        entry.pack(side="left", padx=(0, 5))
 
-        def _update_days(*_):
+        def open_calendar():
             try:
-                yr = int(y_var.get())
-                mo = int(m_var.get())
-            except ValueError:
+                from tkcalendar import Calendar
+            except ImportError:
                 return
-            max_d = cal_mod.monthrange(yr, mo)[1]
-            d_cb["values"] = [f"{d:02d}" for d in range(1, max_d + 1)]
-            if int(d_var.get()) > max_d:
-                d_var.set(f"{max_d:02d}")
-            if on_change:
-                on_change()
 
-        # Initialise days list first (without triggering on_change)
-        try:
-            yr = int(y_var.get())
-            mo = int(m_var.get())
-        except ValueError:
-            yr, mo = today.year, today.month
-        max_d = cal_mod.monthrange(yr, mo)[1]
-        d_cb["values"] = [f"{d:02d}" for d in range(1, max_d + 1)]
+            # Create a custom popup window
+            popup = tk.Toplevel(frame)
+            popup.title("Select Date")
+            popup.configure(bg=CARD_BG)
 
-        # Now attach traces (so on_change only fires on user interaction)
-        y_var.trace_add("write", _update_days)
-        m_var.trace_add("write", _update_days)
-        d_var.trace_add("write", lambda *_: on_change() if on_change else None)
+            # Position it right below the entry box
+            x = entry.winfo_rootx()
+            y = entry.winfo_rooty() + entry.winfo_height() + 2
+            popup.geometry(f"+{x}+{y}")
 
+            # Remove window borders for a clean dropdown look
+            popup.overrideredirect(True)
+
+            # Safely grab focus
+            popup.grab_set()
+            popup.focus()
+
+            # Create the main, stable Calendar widget
+            cal = Calendar(popup, selectmode='day',
+                           year=frame.current_date.year,
+                           month=frame.current_date.month,
+                           day=frame.current_date.day,
+                           background=PRIMARY, foreground='white',
+                           headersbackground='#e2e8f0', headersforeground=TEXT_DARK,
+                           selectbackground=PRIMARY, selectforeground='white',
+                           normalbackground=ENTRY_BG, normalforeground=TEXT_DARK,
+                           weekendbackground=ENTRY_BG, weekendforeground=TEXT_DARK,
+                           othermonthbackground='#f1f5f9', othermonthforeground='#a0aec0',
+                           font=(FONT, 10), borderwidth=1)
+            cal.pack(padx=2, pady=2)
+
+            def set_date_and_close(event=None):
+                selected = cal.selection_get()
+                frame.current_date = selected
+                date_str_var.set(selected.strftime("%d-%m-%Y"))
+
+                # Safely release the app freeze
+                popup.grab_release()
+                popup.destroy()
+
+                if on_change:
+                    on_change()
+
+            def close_popup(event=None):
+                # Cancel and release if they click the cancel button or press Escape
+                popup.grab_release()
+                popup.destroy()
+
+            # Bind selection
+            cal.bind("<<CalendarSelected>>", set_date_and_close)
+            popup.bind("<Escape>", close_popup)
+
+            # Add a small cancel button at the bottom just in case
+            btn_frame = tk.Frame(popup, bg=CARD_BG)
+            btn_frame.pack(fill="x", pady=(0, 4))
+            tk.Button(btn_frame, text="❌ Cancel", command=close_popup, font=(FONT, 9),
+                      bg=CARD_BG, fg=DANGER, bd=0, cursor="hand2").pack(side="right", padx=10)
+
+        # Calendar Icon Button
+        btn = tk.Button(frame, text="📅", command=open_calendar, cursor="hand2",
+                        bd=0, bg=CARD_BG, font=(FONT, 12))
+        btn.pack(side="left")
+
+        # --- Maintain API Compatibility ---
         def get_date():
-            try:
-                return date(int(y_var.get()), int(m_var.get()), int(d_var.get()))
-            except (ValueError, TypeError):
-                return date.today()
+            return frame.current_date
 
         def set_date(d):
-            y_var.set(str(d.year))
-            m_var.set(f"{d.month:02d}")
-            d_var.set(f"{d.day:02d}")
+            frame.current_date = d
+            date_str_var.set(d.strftime("%d-%m-%Y"))
 
         frame.get_date = get_date
         frame.set_date = set_date
+
         return frame
 
     # ══════════════════════════════════════════════════
@@ -782,7 +819,7 @@ class LoomTrackerApp:
                            activebackground=CARD_BG, activeforeground=TEXT_DARK,
                            selectcolor=CARD_BG).grid(row=0, column=i+1, padx=10, pady=14)
 
-        tk.Label(shift_inner, text="📅 Date:", font=(FONT, 13, "bold"),
+        tk.Label(shift_inner, text="Date:", font=(FONT, 13, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=3, padx=(20, 5), pady=14)
         op_names = [o["name"] for o in operators]
         style_codes = [s['style_name'] for s in styles]
@@ -1038,7 +1075,7 @@ class LoomTrackerApp:
         grid_f.pack(anchor="w", padx=15, pady=(0, 10))
 
         # Row 0: Core Inputs
-        tk.Label(grid_f, text="📅 Date *", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, sticky="w", pady=6)
+        tk.Label(grid_f, text="Date *", font=(FONT, 10, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, sticky="w", pady=6)
         l_date_sel = self._make_date_selector(grid_f)
         l_date_sel.grid(row=0, column=1, padx=(10, 20), pady=6, sticky="w")
 
@@ -1101,7 +1138,7 @@ class LoomTrackerApp:
         # ── BOTTOM LEFT: Calendar Card ──
         cal_card = self._make_card(cal_frame)
 
-        tk.Label(cal_card, text="📅 Leave Calendar", font=(FONT, 12, "bold"),
+        tk.Label(cal_card, text="Leave Calendar", font=(FONT, 12, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=10)
 
         today = date.today()
@@ -1980,29 +2017,31 @@ class LoomTrackerApp:
         tk.Label(card, text="🔎  Filter Production", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=6, padx=15, pady=(12, 5), sticky="w")
 
-        tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         e_from = self._make_date_selector(card)
         e_from.grid(row=1, column=1, padx=5, pady=8)
-        tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+
+        tk.Label(card, text="To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         e_to = self._make_date_selector(card)
         e_to.grid(row=1, column=3, padx=5, pady=8)
+
         tk.Label(card, text="Shift:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
-        shift_combo = MultiSelectDropdown(card, choices=["Day", "Night"], width=12, font=(FONT, 10))
+        shift_combo = MultiSelectDropdown(card, choices=["Day", "Night"], width=12, font=(FONT, 12))
         shift_combo.grid(row=1, column=5, padx=5, pady=8)
 
         loom_opts = [l["loom_number"] for l in looms]
         tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
-        loom_combo = MultiSelectDropdown(card, choices=loom_opts, width=12, font=(FONT, 10))
+        loom_combo = MultiSelectDropdown(card, choices=loom_opts, width=12, font=(FONT, 12))
         loom_combo.grid(row=2, column=1, padx=5, pady=8)
 
         op_opts = [o["name"] for o in operators]
         tk.Label(card, text="👷 Operator:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
-        op_combo = MultiSelectDropdown(card, choices=op_opts, width=12, font=(FONT, 10))
+        op_combo = MultiSelectDropdown(card, choices=op_opts, width=12, font=(FONT, 12))
         op_combo.grid(row=2, column=3, padx=5, pady=8)
 
         style_opts = [s["style_name"] for s in styles]
         tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=4, padx=(15, 5), pady=8, sticky="w")
-        style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 10))
+        style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 12))
         style_combo.grid(row=2, column=5, padx=5, pady=8)
 
         btn_frame = tk.Frame(card, bg=CARD_BG)
@@ -2129,11 +2168,11 @@ class LoomTrackerApp:
         tk.Label(card, text="💰  Salary Report", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=6, padx=15, pady=(12, 5), sticky="w")
 
-        tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         e_from = self._make_date_selector(card)
         e_from.grid(row=1, column=1, padx=5, pady=8)
 
-        tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         e_to = self._make_date_selector(card)
         e_to.grid(row=1, column=3, padx=5, pady=8)
 
@@ -2319,10 +2358,10 @@ class LoomTrackerApp:
         card = self._make_card(scroll_frame)
         tk.Label(card, text="✂  Loom Cuts History", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
-        tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         cuts_from = self._make_date_selector(card)
         cuts_from.grid(row=1, column=1, padx=5, pady=8)
-        tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         cuts_to = self._make_date_selector(card)
         cuts_to.grid(row=1, column=3, padx=5, pady=8)
         tk.Label(card, text="🏭 Loom:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=0, padx=(15, 5), pady=8, sticky="w")
