@@ -509,29 +509,6 @@ def get_remaining_looms_filtered(loom_ids=None, style_ids=None, locations=None):
     return rows
 
 
-def get_salary_report(start_date, end_date):
-    """Get salary breakdown per operator per style per shift."""
-    conn = get_connection()
-    rows = conn.execute("""
-        SELECT o.name as operator_name,
-               ds.style_code,
-               ds.style_name,
-               ds.price as rate,
-               dt.shift,
-               COUNT(*) as shift_count,
-               SUM(dt.length_produced) as total_meters,
-               SUM(dt.length_produced * ds.price) as total_wages
-        FROM daily_tracking dt
-        JOIN operators o ON dt.operator_id = o.id
-        JOIN dhothi_styles ds ON dt.style_id = ds.id
-        WHERE dt.tracking_date >= ? AND dt.tracking_date <= ?
-        GROUP BY o.name, ds.style_code, dt.shift
-        ORDER BY o.name, ds.style_code, dt.shift
-    """, (start_date, end_date)).fetchall()
-    conn.close()
-    return rows
-
-
 def has_data():
     """Check if any looms exist (i.e. DB has been populated)."""
     conn = get_connection()
@@ -586,6 +563,54 @@ def delete_leave_entry(leave_id):
     conn.execute("DELETE FROM operator_leaves WHERE id=?", (leave_id,))
     conn.commit()
     conn.close()
+
+
+def get_salary_report(start_date, end_date, operator_ids=None):
+    """Get salary breakdown per operator per style per shift, with optional multi-select operator filter."""
+    conn = get_connection()
+    query = """
+        SELECT o.name as operator_name,
+               dt.tracking_date,
+               ds.style_code,
+               ds.style_name,
+               ds.price as rate,
+               dt.shift,
+               SUM(dt.length_produced) as total_meters
+        FROM daily_tracking dt
+        JOIN operators o ON dt.operator_id = o.id
+        JOIN dhothi_styles ds ON dt.style_id = ds.id
+        WHERE dt.tracking_date >= ? AND dt.tracking_date <= ?
+    """
+    params = [start_date, end_date]
+    
+    if operator_ids is not None:
+        if not operator_ids: return [] # Return empty if no operators selected
+        placeholders = ",".join("?" * len(operator_ids))
+        query += f" AND dt.operator_id IN ({placeholders})"
+        params.extend(operator_ids)
+        
+    query += """
+        GROUP BY dt.tracking_date, o.name, ds.style_code, dt.shift
+        ORDER BY dt.tracking_date, o.name, ds.style_code, dt.shift
+    """
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return rows
+
+
+def get_leave_counts(start_date, end_date):
+    """Count total leaves taken by each operator in the given date range."""
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT o.name as operator_name, COUNT(*) as leave_count
+        FROM operator_leaves ol
+        JOIN operators o ON ol.operator_id = o.id
+        WHERE ol.leave_date >= ? AND ol.leave_date <= ?
+        GROUP BY o.name
+    """, (start_date, end_date)).fetchall()
+    conn.close()
+    # Returns a dictionary: {"Operator Name": 2, "Another Name": 1}
+    return {r["operator_name"]: r["leave_count"] for r in rows}
 
 
 def insert_sample_data():

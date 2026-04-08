@@ -2120,57 +2120,104 @@ class LoomTrackerApp:
     def _build_salary_report(self, parent):
         canvas, scroll_frame = self._make_scrollable(parent)
 
+        # Fetch operators for filter
+        operators = db.get_active_operators()
+        op_opts = [o["name"] for o in operators]
+
         # Filter card
         card = self._make_card(scroll_frame)
         tk.Label(card, text="💰  Salary Report", font=(FONT, 15, "bold"),
-                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
+                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=0, columnspan=6, padx=15, pady=(12, 5), sticky="w")
+
         tk.Label(card, text="📅 From:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=0, padx=(15, 5), pady=8, sticky="w")
         e_from = self._make_date_selector(card)
         e_from.grid(row=1, column=1, padx=5, pady=8)
+
         tk.Label(card, text="📅 To:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=2, padx=(15, 5), pady=8, sticky="w")
         e_to = self._make_date_selector(card)
         e_to.grid(row=1, column=3, padx=5, pady=8)
+
+        # Multi-select Operator Filter
+        tk.Label(card, text="👷 Operator:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
+        op_combo = MultiSelectDropdown(card, choices=op_opts, width=15, font=(FONT, 12))
+        op_combo.grid(row=1, column=5, padx=5, pady=8)
+
         btn_frame = tk.Frame(card, bg=CARD_BG)
-        btn_frame.grid(row=2, column=0, columnspan=4, padx=15, pady=(5, 12), sticky="w")
+        btn_frame.grid(row=2, column=0, columnspan=6, padx=15, pady=(5, 12), sticky="w")
 
         results_card = self._make_card(scroll_frame)
         results_inner = tk.Frame(results_card, bg=CARD_BG)
         results_inner.pack(fill="both", padx=15, pady=10)
 
+        # PDF Export Function
+        def export_salary_pdf():
+            if not hasattr(self, '_salary_rows') or not self._salary_rows:
+                messagebox.showinfo("No Data", "Generate report first, then export.")
+                return
+
+            headers = ["Operator", "Style", "Rate", "Meters", "Wages"]
+            widths = [50, 95, 35, 30, 35] # Total ~245mm
+            
+            # Using generic helper function defined earlier
+            self._export_generic_pdf("Operator Salary Report", headers, widths, self._salary_rows, "salary_report")
+
         def search_salary():
             for w in results_inner.winfo_children():
                 w.destroy()
+
             start_d = e_from.get_date().isoformat()
             end_d = e_to.get_date().isoformat()
-            rows = db.get_salary_report(start_d, end_d)
+
+            sel_ops = op_combo.get_selected()
+            sel_op_ids = [o["id"] for o in operators if o["name"] in sel_ops]
+
+            # Fetch standard tracking rows AND leave counts
+            rows = db.get_salary_report(start_d, end_d, sel_op_ids)
+            leave_counts = db.get_leave_counts(start_d, end_d)
+
             if not rows:
                 tk.Label(results_inner, text="No salary data found for this period.",
                          font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
+                self._salary_rows = []
                 return
 
             # Aggregate by operator (summary) and keep detail rows
             ops = {}
             for r in rows:
                 name = r["operator_name"]
+                leaves_taken = leave_counts.get(name, 0)
+
+                # --- APPLY RATE REDUCTION LOGIC ---
+                rate = r["rate"]
+                if leaves_taken > 1:
+                    rate = rate - 0.50
+
+                # Recalculate wages with potentially reduced rate
+                total_wages = r["total_meters"] * rate
+
                 if name not in ops:
-                    ops[name] = {"day_shifts": 0, "night_shifts": 0, "total_meters": 0.0, "total_wages": 0.0, "styles": {}}
-                if r["shift"] == "Day":
-                    ops[name]["day_shifts"] += r["shift_count"]
-                else:
-                    ops[name]["night_shifts"] += r["shift_count"]
+                    ops[name] = {
+                        "worked_shifts": set(), "total_meters": 0.0, 
+                        "total_wages": 0.0, "styles": {}, "leaves": leaves_taken
+                    }
+
+                ops[name]["worked_shifts"].add((r["tracking_date"], r["shift"]))
                 ops[name]["total_meters"] += r["total_meters"]
-                ops[name]["total_wages"] += r["total_wages"]
+                ops[name]["total_wages"] += total_wages
+
                 # Per-style breakdown
                 scode = r["style_code"]
                 if scode not in ops[name]["styles"]:
-                    ops[name]["styles"][scode] = {"name": r["style_name"], "rate": r["rate"],
-                                                   "meters": 0.0, "wages": 0.0}
+                    ops[name]["styles"][scode] = {
+                        "name": r["style_name"], "rate": rate,
+                        "meters": 0.0, "wages": 0.0
+                    }
                 ops[name]["styles"][scode]["meters"] += r["total_meters"]
-                ops[name]["styles"][scode]["wages"] += r["total_wages"]
+                ops[name]["styles"][scode]["wages"] += total_wages
 
             grand_meters = sum(d["total_meters"] for d in ops.values())
             grand_wages = sum(d["total_wages"] for d in ops.values())
-            grand_shifts = sum(d["day_shifts"] + d["night_shifts"] for d in ops.values())
+            grand_shifts = sum(len(d["worked_shifts"]) for d in ops.values())
 
             # Summary cards row
             summary_frame = tk.Frame(results_inner, bg=CARD_BG)
@@ -2187,40 +2234,79 @@ class LoomTrackerApp:
                 tk.Label(sf, text=val, font=(FONT, 16, "bold"), bg="#f8fafc", fg=clr).pack(anchor="w", padx=12, pady=(0, 8))
 
             # Salary table with style detail (operator → style rows)
-            cols = ("Operator", "Style", "Rate (₹/m)", "Shift", "Meters", "Wages (₹)")
+            cols = ("Operator", "Style", "Rate (₹/m)", "Shift Info", "Meters", "Wages (₹)")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=18)
             for col in cols:
                 tree.heading(col, text=col)
                 tree.column(col, width=110, anchor="center")
             tree.column("Operator", width=140, anchor="w")
             tree.column("Style", width=130, anchor="w")
+            tree.column("Shift Info", width=140, anchor="w") # Made wider for leave info
+
             tree.tag_configure("even", background="#ffffff")
             tree.tag_configure("odd", background="#f8fafc")
             tree.tag_configure("op_total", background="#eef2ff", font=(FONT, 12, "bold"))
+            tree.tag_configure("penalty", foreground=DANGER) # Red text if penalty applied
+
             row_idx = 0
+            self._salary_rows = [] # Store rows for PDF Exporter
+
             for name in sorted(ops):
                 d = ops[name]
+                leaves = d["leaves"]
+                penalty_applied = leaves > 1
+
+                day_shifts = sum(1 for date, shift in d["worked_shifts"] if shift == "Day")
+                night_shifts = sum(1 for date, shift in d["worked_shifts"] if shift == "Night")
+                total_shifts = len(d["worked_shifts"])
+
                 # Style detail rows
                 for scode in sorted(d["styles"]):
                     sd = d["styles"][scode]
                     tag = "even" if row_idx % 2 == 0 else "odd"
-                    tree.insert("", "end", values=(
+
+                    rate_str = f"₹{sd['rate']:.2f}"
+                    if penalty_applied: rate_str += " (-0.50)" # Indicate penalty in UI
+
+                    row_vals = (
                         name if scode == sorted(d["styles"])[0] else "",
-                        f"{scode} ({sd['name']})", f"₹{sd['rate']:.2f}", "",
-                        f"{sd['meters']:.1f}", f"₹{sd['wages']:.2f}"), tags=(tag,))
+                        f"{scode} ({sd['name']})",
+                        rate_str,
+                        f"{sd['meters']:.1f}",
+                        f"₹{sd['wages']:.2f}"
+                    )
+
+                    tree_tags = (tag, "penalty") if penalty_applied else (tag,)
+                    tree.insert("", "end", values=row_vals, tags=tree_tags)
+                    self._salary_rows.append(list(row_vals))
                     row_idx += 1
+
                 # Operator total row
-                total_shifts = d["day_shifts"] + d["night_shifts"]
                 avg_rate = d["total_wages"] / d["total_meters"] if d["total_meters"] > 0 else 0
-                tree.insert("", "end", values=(
-                    f"  ▸ {name} TOTAL", "", f"Avg ₹{avg_rate:.2f}",
-                    f"D:{d['day_shifts']} N:{d['night_shifts']} = {total_shifts}",
-                    f"{d['total_meters']:.1f}", f"₹{d['total_wages']:.2f}"), tags=("op_total",))
+
+                # Show leaves taken in the summary line
+                shift_info = f"D:{day_shifts} N:{night_shifts} = {total_shifts}"
+                if leaves > 0:
+                    shift_info += f"  (Leaves: {leaves})"
+
+                tot_vals = (
+                    f"  ▸ {name} TOTAL",
+                    shift_info,
+                    f"Avg ₹{avg_rate:.2f}",
+                    f"{d['total_meters']:.1f}",
+                    f"₹{d['total_wages']:.2f}"
+                )
+                tree.insert("", "end", values=tot_vals, tags=("op_total",))
+                self._salary_rows.append(list(tot_vals))
                 row_idx += 1
+
             tree.pack(fill="both", expand=True)
 
         self._make_button(btn_frame, "🔍 Generate", search_salary, color=PRIMARY, width=12).pack(side="left", padx=(0, 8))
+        self._make_button(btn_frame, "📄 Export PDF", export_salary_pdf, color="#e11d48", width=12).pack(side="left", padx=5)
+
         search_salary()
+
 
     # ── Loom Cuts Report ──
     def _build_cuts_report(self, parent):
@@ -2305,20 +2391,18 @@ class LoomTrackerApp:
                 messagebox.showinfo("No Data", "Search first, then export.")
                 return
 
-            headers = ["Date", "Loom", "Operator", "Style", "Cut (m)", "Skipped", "Comment"]
-            widths = [30, 20, 40, 40, 25, 20, 90] # Total width should be <= ~270 for Landscape A4
+            headers = ["Date", "Loom", "Operator", "Style", "Cut (m)", "Comment"]
+            widths = [30, 20, 40, 60, 25, 90] # Total width should be <= ~270 for Landscape A4
 
             data_rows = []
             for r in self._cuts_rows:
-                skipped = "Yes" if r["was_skipped"] else "No"
                 total_len = r["length_at_reset"]
                 remaining = r["remaining_length"] if r["remaining_length"] else 0.0
                 cut_len = round(total_len - remaining, 1) if not r["was_skipped"] else 0.0
 
                 data_rows.append([
                     r["reset_date"], r["loom_number"], r["operator_name"], r["style_name"],
-                    f"{cut_len:.1f}" if not r["was_skipped"] else "—",
-                    skipped, r["comment"]
+                    f"{cut_len:.1f}" if not r["was_skipped"] else "—", r["comment"]
                 ])
 
             self._export_generic_pdf("Loom Cuts History", headers, widths, data_rows, "loom_cuts")
