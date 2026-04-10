@@ -1,0 +1,28 @@
+name: Build Windows App
+
+on: [push]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: pip install pyinstaller tkcalendar fpdf2
+        
+      - name: Build EXE with PyInstaller
+        run: pyinstaller --noconsole --onefile --add-data "DejaVuSans-Bold.ttf;." main.py
+        
+      - name: Upload Finished EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoomTracker-Windows-App
+          path: dist/main.exe
