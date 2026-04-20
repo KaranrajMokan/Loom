@@ -787,6 +787,7 @@ class LoomTrackerApp:
         looms = db.get_active_looms()
         operators = db.get_active_operators()
         styles = db.get_active_styles()
+        locations = sorted(list(set(l["location"] for l in looms)))
 
         if not looms:
             tk.Label(scroll_frame, text="⚠️ No looms found. Add looms first.", font=(FONT, 15),
@@ -818,8 +819,14 @@ class LoomTrackerApp:
                            activebackground=CARD_BG, activeforeground=TEXT_DARK,
                            selectcolor=CARD_BG).grid(row=0, column=i+1, padx=10, pady=14)
 
+        tk.Label(shift_inner, text="📍 Godown:", font=(FONT, 11, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=3, padx=(20, 5))
+        loc_var = tk.StringVar()
+        loc_combo = ttk.Combobox(shift_inner, textvariable=loc_var, values=locations, width=15, state="readonly", font=(FONT, 11))
+        loc_combo.grid(row=0, column=4, padx=5)
+        loc_combo.set("1")  # Default to location 1
+
         tk.Label(shift_inner, text="Date:", font=(FONT, 13, "bold"),
-                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=3, padx=(20, 5), pady=14)
+                 bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=5, padx=(20, 5), pady=14)
         op_names = [o["name"] for o in operators]
         style_codes = [s['style_name'] for s in styles]
         self._entry_rows = []
@@ -834,9 +841,12 @@ class LoomTrackerApp:
                 w.destroy()
             self._entry_rows = []
             current_shift = shift_var.get()
+            current_loc = loc_var.get()
             today = self._date_entry.get_date().isoformat()
 
-            for loom in looms:
+            filtered_looms = [l for l in looms if l["location"] == current_loc]
+
+            for loom in filtered_looms:
                 card = tk.Frame(looms_container, bg=CARD_BG, bd=0, highlightthickness=1,
                                 highlightbackground=DIVIDER)
                 card.pack(fill="x", pady=6)
@@ -937,10 +947,11 @@ class LoomTrackerApp:
         # Create date selector (after build_loom_cards is defined so on_change can reference it)
         self._date_entry = date_entry = self._make_date_selector(
             shift_inner, on_change=lambda: build_loom_cards())
-        date_entry.grid(row=0, column=4, padx=5, pady=14)
+        date_entry.grid(row=0, column=6, padx=5, pady=14)
 
         # Rebuild cards when shift changes
         shift_var.trace_add("write", lambda *_: build_loom_cards())
+        loc_combo.bind("<<ComboboxSelected>>", lambda e: build_loom_cards())
         build_loom_cards()
 
         # Submit all button
