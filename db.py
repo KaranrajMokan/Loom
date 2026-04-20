@@ -464,7 +464,7 @@ def get_loom_resets_filtered(start_date=None, end_date=None, loom_ids=None, styl
         placeholders = ",".join("?" * len(style_ids))
         query += f" AND ds.id IN ({placeholders})"
         params.extend(style_ids)
-    query += " ORDER BY lr.reset_date DESC, lr.created_at DESC"
+    query += " ORDER BY lr.loom_id ASC,lr.reset_date DESC, lr.created_at DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()
     return rows
