@@ -1607,7 +1607,7 @@ class LoomTrackerApp:
                  bg=CARD_BG, fg=TEXT_DARK)
         form_title.grid(row=0, column=0, columnspan=4, padx=15, pady=(12, 5), sticky="w")
         e_num = self._make_label_entry(card, "Loom Number *", 1)
-        e_loc = self._make_label_entry(card, "Location", 2)
+        e_loc = self._make_label_entry(card, "Godown", 2)
         e_notes = self._make_label_entry(card, "Notes", 3)
 
         tk.Label(card, text="Status", font=(FONT, 12), bg=CARD_BG,
@@ -1651,7 +1651,7 @@ class LoomTrackerApp:
         list_card = self._make_card(self.content)
         tk.Label(list_card, text="All Looms  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
-        cols = ("Loom #", "Location", "Status", "Current Length (m)", "Notes")
+        cols = ("Loom #", "Godown", "Status", "Current Length (m)", "Notes")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
         for col in cols:
             tree.heading(col, text=col)
@@ -1749,7 +1749,7 @@ class LoomTrackerApp:
         list_card = self._make_card(self.content)
         tk.Label(list_card, text="All Operators  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
-        cols = ("ID", "Name", "Spouse", "Phone", "Address", "Joined", "Status")
+        cols = ("Name", "Spouse", "Phone", "Address", "Joined", "Status")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
         for col in cols:
             tree.heading(col, text=col)
@@ -1759,7 +1759,7 @@ class LoomTrackerApp:
         for idx, op in enumerate(db.get_all_operators()):
             active = "Active" if op["is_active"] else "Inactive"
             tag = "even" if idx % 2 == 0 else "odd"
-            tree.insert("", "end", values=(op["id"], op["name"], op["spouse_name"],
+            tree.insert("", "end", values=(op["name"], op["spouse_name"],
                         op["phone"], op["address"], op["date_joined"], active), tags=(tag,))
         tree.tag_configure("even", background="#ffffff")
         tree.tag_configure("odd", background="#f8fafc")
@@ -1852,7 +1852,7 @@ class LoomTrackerApp:
         list_card = self._make_card(self.content)
         tk.Label(list_card, text="All Dhothi Styles  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
-        cols = ("ID", "Code", "Name", "Category", "Price (₹/m)", "Status")
+        cols = ("Code", "Name", "Category", "Price (₹/m)", "Status")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
         for col in cols:
             tree.heading(col, text=col)
@@ -1861,7 +1861,7 @@ class LoomTrackerApp:
             active = "Active" if s["is_active"] else "Inactive"
             tag = "even" if idx % 2 == 0 else "odd"
             cat = s["style_category"] if s["style_category"] else "D"
-            tree.insert("", "end", values=(s["id"], s["style_code"],
+            tree.insert("", "end", values=(s["style_code"],
                         s["style_name"], cat, f"₹{s['price']:.2f}", active), tags=(tag,))
         tree.tag_configure("even", background="#ffffff")
         tree.tag_configure("odd", background="#f8fafc")
@@ -2473,7 +2473,7 @@ class LoomTrackerApp:
         rem_style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 12))
         rem_style_combo.grid(row=1, column=3, padx=5, pady=8)
 
-        tk.Label(card, text="📍 Location:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
+        tk.Label(card, text="📍 Godown:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=1, column=4, padx=(15, 5), pady=8, sticky="w")
         rem_loc_combo = MultiSelectDropdown(card, choices=locations, width=12, font=(FONT, 12))
         rem_loc_combo.grid(row=1, column=5, padx=5, pady=8)
 
@@ -2505,7 +2505,7 @@ class LoomTrackerApp:
                 rem_summary_var.set("0 looms found")
                 return
 
-            cols = ("Loom Number", "Location", "Current Style", "Remaining in Machine (m)")
+            cols = ("Loom Number", "Godown", "Current Style", "Remaining in Machine (m)")
             tree = ttk.Treeview(results_inner, columns=cols, show="headings", height=15)
             scroll = ttk.Scrollbar(results_inner, orient="vertical", command=tree.yview)
             tree.configure(yscrollcommand=scroll.set)
@@ -2513,7 +2513,7 @@ class LoomTrackerApp:
             for col in cols:
                 tree.heading(col, text=col)
                 tree.column(col, width=150, anchor="center")
-            tree.column("Location", width=180, anchor="w")
+            tree.column("Godown", width=180, anchor="w")
 
             total_remaining = 0.0
             for idx, r in enumerate(rows):

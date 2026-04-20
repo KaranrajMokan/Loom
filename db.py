@@ -132,7 +132,7 @@ def get_all_looms():
             SELECT id FROM daily_tracking WHERE loom_id = l.id ORDER BY tracking_date DESC, id DESC LIMIT 1
         )
         LEFT JOIN dhothi_styles ds ON dt.style_id = ds.id
-        ORDER BY l.loom_number
+        ORDER BY l.location, l.loom_number
     """).fetchall()
     conn.close()
     return rows
