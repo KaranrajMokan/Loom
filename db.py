@@ -385,10 +385,10 @@ def get_last_entry_for_loom_shift(loom_id, shift):
 
 
 def get_tracking_filtered(start_date=None, end_date=None, loom_ids=None,
-                          operator_ids=None, style_ids=None, shifts=None):
-    """Get tracking entries with multi-select optional filters."""
+                          operator_ids=None, style_ids=None, shifts=None, locations=None):
+    """Get tracking entries with multi-select optional filters, including location."""
     conn = get_connection()
-    query = """SELECT dt.*, l.loom_number, o.name as operator_name,
+    query = """SELECT dt.*, l.loom_number, l.location, o.name as operator_name,
                       ds.style_code, ds.style_name, ds.price as style_price,
                       (dt.length_produced * ds.price) as wages, comment
                FROM daily_tracking dt
@@ -423,6 +423,12 @@ def get_tracking_filtered(start_date=None, end_date=None, loom_ids=None,
         placeholders = ",".join("?" * len(shifts))
         query += f" AND dt.shift IN ({placeholders})"
         params.extend(shifts)
+    if locations is not None:
+        if not locations: return []
+        placeholders = ",".join("?" * len(locations))
+        # Safely handle empty strings or NULLs as 'General' to match UI
+        query += f" AND COALESCE(NULLIF(l.location, ''), 'General') IN ({placeholders})"
+        params.extend(locations)
     query += " ORDER BY dt.tracking_date DESC, dt.shift, l.loom_number"
     rows = conn.execute(query, params).fetchall()
     conn.close()

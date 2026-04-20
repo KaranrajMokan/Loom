@@ -2043,6 +2043,11 @@ class LoomTrackerApp:
         style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 12))
         style_combo.grid(row=2, column=5, padx=5, pady=8)
 
+        locations = sorted(list(set(l["location"] for l in looms if l["location"].strip())))
+        tk.Label(card, text="📍 Godown:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=6, padx=(15, 5), pady=8, sticky="w")
+        loc_combo = MultiSelectDropdown(card, choices=locations, width=12, font=(FONT, 12))
+        loc_combo.grid(row=2, column=7, padx=5, pady=8)
+
         btn_frame = tk.Frame(card, bg=CARD_BG)
         btn_frame.grid(row=3, column=0, columnspan=6, padx=15, pady=(5, 12), sticky="w")
 
@@ -2062,12 +2067,13 @@ class LoomTrackerApp:
             sel_looms = loom_combo.get_selected()
             sel_ops = op_combo.get_selected()
             sel_styles = style_combo.get_selected()
+            sel_locs = loc_combo.get_selected()
 
             sel_loom_ids = [l["id"] for l in looms if l["loom_number"] in sel_looms]
             sel_op_ids = [o["id"] for o in operators if o["name"] in sel_ops]
             sel_style_ids = [s["id"] for s in styles if s["style_name"] in sel_styles]
 
-            rows = db.get_tracking_filtered(start_d, end_d, sel_loom_ids, sel_op_ids, sel_style_ids, sel_shifts)
+            rows = db.get_tracking_filtered(start_d, end_d, sel_loom_ids, sel_op_ids, sel_style_ids, sel_shifts, sel_locs)
             if not rows:
                 tk.Label(results_inner, text="No entries found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 summary_var.set("0 entries found")
