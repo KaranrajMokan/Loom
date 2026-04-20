@@ -781,29 +781,26 @@ class LoomTrackerApp:
         self._set_active_nav("📝  Daily Entry")
         self._make_header("Daily Shift Entry")
 
-        # Scrollable area
-        canvas, scroll_frame = self._make_scrollable(self.content)
-
         looms = db.get_active_looms()
         operators = db.get_active_operators()
         styles = db.get_active_styles()
         locations = sorted(list(set(l["location"] for l in looms)))
 
         if not looms:
-            tk.Label(scroll_frame, text="⚠️ No looms found. Add looms first.", font=(FONT, 15),
+            tk.Label(self.content, text="⚠️ No looms found. Add looms first.", font=(FONT, 15),
                      bg=BG, fg=DANGER).pack(pady=30)
             return
         if not operators:
-            tk.Label(scroll_frame, text="⚠️ No operators found. Add operators first.", font=(FONT, 15),
+            tk.Label(self.content, text="⚠️ No operators found. Add operators first.", font=(FONT, 15),
                      bg=BG, fg=DANGER).pack(pady=30)
             return
         if not styles:
-            tk.Label(scroll_frame, text="⚠️ No styles found. Add dhothi styles first.", font=(FONT, 15),
+            tk.Label(self.content, text="⚠️ No styles found. Add dhothi styles first.", font=(FONT, 15),
                      bg=BG, fg=DANGER).pack(pady=30)
             return
 
         # Shift selector card
-        shift_card = tk.Frame(scroll_frame, bg=CARD_BG, bd=0, highlightthickness=1,
+        shift_card = tk.Frame(self.content, bg=CARD_BG, bd=0, highlightthickness=1,
                               highlightbackground=DIVIDER)
         shift_card.pack(fill="x", pady=8)
         # Accent top bar
@@ -827,6 +824,10 @@ class LoomTrackerApp:
 
         tk.Label(shift_inner, text="Date:", font=(FONT, 13, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).grid(row=0, column=5, padx=(20, 5), pady=14)
+
+        # Scrollable area
+        canvas, scroll_frame = self._make_scrollable(self.content)
+
         op_names = [o["name"] for o in operators]
         style_codes = [s['style_name'] for s in styles]
         self._entry_rows = []
