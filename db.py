@@ -429,7 +429,7 @@ def get_tracking_filtered(start_date=None, end_date=None, loom_ids=None,
     return rows
 
 
-def get_loom_resets_filtered(start_date=None, end_date=None, loom_ids=None, style_ids=None):
+def get_loom_resets_filtered(start_date=None, end_date=None, loom_ids=None, style_ids=None, locations=None):
     """Get loom reset/cut history with optional filters, including operator name and dhothi style."""
     conn = get_connection()
     query = """SELECT lr.*, l.loom_number,
@@ -464,6 +464,12 @@ def get_loom_resets_filtered(start_date=None, end_date=None, loom_ids=None, styl
         placeholders = ",".join("?" * len(style_ids))
         query += f" AND ds.id IN ({placeholders})"
         params.extend(style_ids)
+    if locations is not None:
+        if not locations: return []
+        placeholders = ",".join("?" * len(locations))
+        # Safely handle empty strings or NULLs as 'General' to match your UI logic
+        query += f" AND COALESCE(NULLIF(l.location, ''), 'General') IN ({placeholders})"
+        params.extend(locations)
     query += " ORDER BY lr.loom_id ASC,lr.reset_date DESC, lr.created_at DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()

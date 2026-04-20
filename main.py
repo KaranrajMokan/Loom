@@ -2353,6 +2353,7 @@ class LoomTrackerApp:
         loom_opts = [l["loom_number"] for l in looms]
         styles = db.get_active_styles()
         style_opts = [s["style_code"] for s in styles]
+        locations = sorted(list(set(l["location"] for l in looms if l["location"].strip())))
 
         card = self._make_card(scroll_frame)
         tk.Label(card, text="✂  Loom Cuts History", font=(FONT, 15, "bold"),
@@ -2369,6 +2370,9 @@ class LoomTrackerApp:
         tk.Label(card, text="🎨 Style:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=2, padx=(15, 5), pady=8, sticky="w")
         cuts_style_combo = MultiSelectDropdown(card, choices=style_opts, width=12, font=(FONT, 12))
         cuts_style_combo.grid(row=2, column=3, padx=5, pady=8)
+        tk.Label(card, text="📍 Godown:", font=(FONT, 12, "bold"), bg=CARD_BG, fg=TEXT_DARK).grid(row=2, column=4, padx=(15, 5), pady=8, sticky="w")
+        cuts_loc_combo = MultiSelectDropdown(card, choices=locations, width=12, font=(FONT, 12))
+        cuts_loc_combo.grid(row=2, column=5, padx=5, pady=8)
         btn_frame = tk.Frame(card, bg=CARD_BG)
         btn_frame.grid(row=3, column=0, columnspan=4, padx=15, pady=(5, 12), sticky="w")
 
@@ -2386,10 +2390,11 @@ class LoomTrackerApp:
             end_d = cuts_to.get_date().isoformat()
             sel_looms = cuts_loom_combo.get_selected()
             sel_styles = cuts_style_combo.get_selected()
+            sel_locs = cuts_loc_combo.get_selected()
 
             sel_loom_ids = [l["id"] for l in looms if l["loom_number"] in sel_looms]
             sel_style_ids = [s["id"] for s in styles if s["style_code"] in sel_styles]
-            rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_ids, sel_style_ids)
+            rows = db.get_loom_resets_filtered(start_d, end_d, sel_loom_ids, sel_style_ids, sel_locs)
             if not rows:
                 tk.Label(results_inner, text="No cuts found.", font=(FONT, 13), bg=CARD_BG, fg=TEXT_LIGHT).pack(pady=20)
                 cuts_summary_var.set("0 cuts found")
