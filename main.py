@@ -5,7 +5,6 @@ Built with Tkinter + SQLite. Runs fully offline.
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import date, datetime
-import calendar as cal_mod
 import csv
 
 from fpdf import XPos, YPos
@@ -115,7 +114,7 @@ class LoomTrackerApp:
         self.root.configure(bg=BG)
 
         db.init_db()
-        db.insert_sample_data()   # populate with demo data on first run
+        db.insert_base_data()   # populate with data on first run
 
         # ── ttk Styling ──
         self._setup_styles()
@@ -1652,7 +1651,7 @@ class LoomTrackerApp:
         list_card = self._make_card(self.content)
         tk.Label(list_card, text="All Looms  (click a row to edit)", font=(FONT, 15, "bold"),
                  bg=CARD_BG, fg=TEXT_DARK).pack(anchor="w", padx=15, pady=(12, 5))
-        cols = ("ID", "Loom #", "Location", "Status", "Current Length (m)", "Notes")
+        cols = ("Loom #", "Location", "Status", "Current Length (m)", "Notes")
         tree = ttk.Treeview(list_card, columns=cols, show="headings", height=10)
         for col in cols:
             tree.heading(col, text=col)
@@ -1665,7 +1664,7 @@ class LoomTrackerApp:
                 tag = "warning"
             else:
                 tag = "even" if idx % 2 == 0 else "odd"
-            tree.insert("", "end", values=(loom["id"], loom["loom_number"], loom["location"],
+            tree.insert("", "end", values=(loom["loom_number"], loom["location"],
                         loom["status"], f"{loom['current_length']:.1f}", loom["notes"]), tags=(tag,))
         tree.tag_configure("warning", background="#fef2f2")
         tree.tag_configure("even", background="#ffffff")

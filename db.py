@@ -613,38 +613,159 @@ def get_leave_counts(start_date, end_date):
     return {r["operator_name"]: r["leave_count"] for r in rows}
 
 
-def insert_sample_data():
-    """Populate DB with sample looms, operators, and styles for testing."""
+def insert_base_data():
+    """Populate DB with looms, operators, and styles"""
     if has_data():
         return  # Don't duplicate
-    # Sample looms
-    sample_looms = [
-        ("L01", "Floor 1 - Left"),
-        ("L02", "Floor 1 - Right"),
-        ("L03", "Floor 1 - Centre"),
-        ("L04", "Floor 2 - Left"),
-        ("L05", "Floor 2 - Right"),
+
+    base_looms = [
+        ("103", "1"),
+        ("104", "1"),
+        ("105", "1"),
+        ("106", "1"),
+        ("107", "1"),
+        ("108", "1"),
+        ("109", "1"),
+        ("110", "1"),
+        ("111", "1"),
+        ("112", "1"),
+        ("113", "1"),
+        ("114", "1"),
+        ("115", "1"),
+        ("116", "1"),
+        ("117", "1"),
+        ("118", "1"),
+        ("119", "1"),
+        ("120", "1"),
+        ("85", "2"),
+        ("86", "2"),
+        ("87", "2"),
+        ("88", "2"),
+        ("89", "2"),
+        ("90", "2"),
+        ("91", "2"),
+        ("92", "2"),
+        ("93", "2"),
+        ("94", "2"),
+        ("95", "2"),
+        ("96", "2"),
+        ("97", "2"),
+        ("98", "2"),
+        ("99", "2"),
+        ("100", "2"),
+        ("101", "2"),
+        ("102", "2"),
+        ("69", "4"),
+        ("70", "4"),
+        ("71", "4"),
+        ("72", "4"),
+        ("73", "4"),
+        ("74", "4"),
+        ("75", "4"),
+        ("76", "4"),
+        ("77", "4"),
+        ("78", "4"),
+        ("79", "4"),
+        ("80", "4"),
+        ("81", "4"),
+        ("82", "4"),
+        ("83", "4"),
+        ("84", "4"),
+        ("53", "5"),
+        ("54", "5"),
+        ("55", "5"),
+        ("56", "5"),
+        ("57", "5"),
+        ("58", "5"),
+        ("59", "5"),
+        ("60", "5"),
+        ("61", "5"),
+        ("62", "5"),
+        ("63", "5"),
+        ("64", "5"),
+        ("65", "5"),
+        ("66", "5"),
+        ("67", "5"),
+        ("68", "5"),
+        ("37", "6"),
+        ("38", "6"),
+        ("39", "6"),
+        ("40", "6"),
+        ("41", "6"),
+        ("42", "6"),
+        ("43", "6"),
+        ("44", "6"),
+        ("45", "6"),
+        ("46", "6"),
+        ("47", "6"),
+        ("48", "6"),
+        ("49", "6"),
+        ("50", "6"),
+        ("51", "6"),
+        ("52", "6"),
+        ("21", "7"),
+        ("22", "7"),
+        ("23", "7"),
+        ("24", "7"),
+        ("25", "7"),
+        ("26", "7"),
+        ("27", "7"),
+        ("28", "7"),
+        ("29", "7"),
+        ("30", "7"),
+        ("31", "7"),
+        ("32", "7"),
+        ("33", "7"),
+        ("34", "7"),
+        ("35", "7"),
+        ("36", "7"),
+        ("121", "8"),
+        ("122", "8"),
+        ("123", "8"),
+        ("124", "8"),
+        ("125", "8"),
+        ("126", "8"),
+        ("127", "8"),
+        ("128", "8"),
+        ("129", "8"),
+        ("130", "8"),
+        ("131", "8"),
+        ("132", "8"),
+        ("133", "8"),
+        ("134", "8"),
+        ("135", "8"),
+        ("136", "8")
     ]
-    for num, loc in sample_looms:
+    for num, loc in base_looms:
         add_loom(num, loc)
 
-    # Sample operators
-    sample_operators = [
+    # Base operators
+    base_operators = [
         ("Raman", "Lakshmi", "9876543210", "12 Weaver St", "2023-01-15"),
         ("Selvam", "Meena", "9876543211", "34 Mill Rd", "2023-03-20"),
         ("Murugan", "Kavitha", "9876543212", "56 Loom Lane", "2023-06-01"),
         ("Kannan", "Priya", "9876543213", "78 Thread Ave", "2024-01-10"),
     ]
-    for name, spouse, phone, addr, joined in sample_operators:
+    for name, spouse, phone, addr, joined in base_operators:
         add_operator(name, spouse, phone, addr, joined)
 
-    # Sample dhothi styles
-    sample_styles = [
-        ("PW-01", "Plain White", 120.0),
-        ("CB-02", "Colour Border", 180.0),
-        ("SL-03", "Silk Blend", 350.0),
-        ("CT-04", "Cotton Regular", 95.0),
-        ("FD-05", "Fancy Design", 250.0),
+    # Base dhothi styles
+    base_styles = [
+        ("120-e-gold", "120 E Gold", 5.35),
+        ("120-e-silver", "120 E Silver", 5.35),
+        ("150-e-gold", "150 E Gold", 5.35),
+        ("150-e-silver", "150 E Silver", 5.35),
+        ("180-e-gold", "180 E Gold", 5.35),
+        ("180-e-silver", "180 E Silver", 5.35),
+        ("180-e-line-gold", "180 E Line Gold", 5.85),
+        ("180-e-line-silver", "180 E Line Silver", 5.85),
+        ("180-e-tissue-gold", "180 E Tissue Gold", 5.35),
+        ("240-e-gold", "240 E Gold", 5.50),
+        ("240-e-silver", "240 E Silver", 5.50),
+        ("168-e-tvk", "168 E TVK", 5.60),
+        ("144-e-fancy", "144 E Fancy", 5.60),
+        ("120-a-gold", "120 A Gold", 5.35),
+        ("180-e-black", "180 E Black", 5.50),
     ]
-    for code, name, price in sample_styles:
+    for code, name, price in base_styles:
         add_style(code, name, price)
