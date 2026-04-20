@@ -313,14 +313,11 @@ class LoomTrackerApp:
         if initial_date is None:
             initial_date = date.today()
 
-        # Container frame
         frame = tk.Frame(parent, bg=CARD_BG)
         frame.current_date = initial_date  # Store the actual date object
 
-        # String variable for the UI
         date_str_var = tk.StringVar(value=initial_date.strftime("%d-%m-%Y"))
 
-        # Read-only entry to display the date beautifully
         entry = tk.Entry(frame, textvariable=date_str_var, width=12, justify="center",
                          font=(FONT, 11), state="readonly", 
                          readonlybackground=ENTRY_BG, fg=TEXT_DARK,
@@ -333,28 +330,23 @@ class LoomTrackerApp:
             except ImportError:
                 return
 
-            # Create a custom popup window
             popup = tk.Toplevel(frame)
             popup.title("Select Date")
             popup.configure(bg=CARD_BG)
+            
+            # 1. THE OS FIX: Tell Windows this popup belongs to the main window
+            popup.transient(parent.winfo_toplevel())
 
-            # Position it right below the entry box
             x = entry.winfo_rootx()
             y = entry.winfo_rooty() + entry.winfo_height() + 2
             popup.geometry(f"+{x}+{y}")
-
-            # Remove window borders for a clean dropdown look
             popup.overrideredirect(True)
 
-            # Safely grab focus
             popup.grab_set()
             popup.focus()
 
-            # Create the main, stable Calendar widget
             cal = Calendar(popup, selectmode='day',
-                           year=frame.current_date.year,
-                           month=frame.current_date.month,
-                           day=frame.current_date.day,
+                           year=frame.current_date.year, month=frame.current_date.month, day=frame.current_date.day,
                            background=PRIMARY, foreground='white',
                            headersbackground='#e2e8f0', headersforeground=TEXT_DARK,
                            selectbackground=PRIMARY, selectforeground='white',
@@ -369,37 +361,35 @@ class LoomTrackerApp:
                 frame.current_date = selected
                 date_str_var.set(selected.strftime("%d-%m-%Y"))
 
-                # Safely release the app freeze
                 popup.grab_release()
+                
+                # 2. THE FOCUS FIX: Aggressively rip control back to the main app window
+                parent.winfo_toplevel().focus_force()
+                
                 popup.destroy()
 
+                # Wait slightly longer (100ms) to ensure Windows fully switches focus 
+                # before we violently destroy and rebuild the 85 loom cards
                 if on_change:
-                    on_change()
+                    frame.after(100, on_change)
 
             def close_popup(event=None):
-                # Cancel and release if they click the cancel button or press Escape
                 popup.grab_release()
+                parent.winfo_toplevel().focus_force()
                 popup.destroy()
 
-            # Bind selection
             cal.bind("<<CalendarSelected>>", set_date_and_close)
             popup.bind("<Escape>", close_popup)
 
-            # Add a small cancel button at the bottom just in case
             btn_frame = tk.Frame(popup, bg=CARD_BG)
             btn_frame.pack(fill="x", pady=(0, 4))
             tk.Button(btn_frame, text="❌ Cancel", command=close_popup, font=(FONT, 9),
                       bg=CARD_BG, fg=DANGER, bd=0, cursor="hand2").pack(side="right", padx=10)
 
-        # Calendar Icon Button
-        btn = tk.Button(frame, text="📅", command=open_calendar, cursor="hand2",
-                        bd=0, bg=CARD_BG, font=(FONT, 12))
+        btn = tk.Button(frame, text="📅", command=open_calendar, cursor="hand2", bd=0, bg=CARD_BG, font=(FONT, 12))
         btn.pack(side="left")
 
-        # --- Maintain API Compatibility ---
-        def get_date():
-            return frame.current_date
-
+        def get_date(): return frame.current_date
         def set_date(d):
             frame.current_date = d
             date_str_var.set(d.strftime("%d-%m-%Y"))
