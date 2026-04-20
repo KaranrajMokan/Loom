@@ -918,16 +918,14 @@ class LoomTrackerApp:
                     # Use existing entry's operator/style for edit mode
                     if existing["operator_name"] in op_names:
                         op_combo.set(existing["operator_name"])
-                    style_key = f"{existing['style_code']} - {existing['style_name']}"
-                    if style_key in style_codes:
-                        st_combo.set(style_key)
+                    if existing['style_name'] in style_codes:
+                        st_combo.set(existing['style_name'])
                 elif last:
                     # Use last entry's operator/style for new entries
                     if last["operator_name"] in op_names:
                         op_combo.set(last["operator_name"])
-                    style_key = f"{last['style_code']} - {last['style_name']}"
-                    if style_key in style_codes:
-                        st_combo.set(style_key)
+                    if last['style_name'] in style_codes:
+                        st_combo.set(last['style_name'])
 
                 # Per-loom save button
                 btn_row = tk.Frame(card, bg=CARD_BG)

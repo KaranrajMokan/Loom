@@ -378,7 +378,7 @@ def get_last_entry_for_loom_shift(loom_id, shift):
                           JOIN operators o ON dt.operator_id = o.id
                           JOIN dhothi_styles ds ON dt.style_id = ds.id
                           WHERE dt.loom_id = ? AND dt.shift = ?
-                          ORDER BY dt.tracking_date DESC, dt.id DESC
+                          ORDER BY dt.tracking_date DESC
                           LIMIT 1""", (loom_id, shift)).fetchone()
     conn.close()
     return row
